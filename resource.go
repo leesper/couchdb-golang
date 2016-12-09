@@ -6,35 +6,36 @@
 package couchdb
 
 import (
+  "bytes"
   "encoding/json"
-  "http"
   "io"
   "io/ioutil"
+  "net/http"
   "net/url"
   "strings"
 )
 
-type StatusCode int
-
 const (
-  UnknownError StatusCode = -1
-  UrlParseError StatusCode = -2
-  OK StatusCode = 200
-  Created StatusCode = 201
-  Accepted StatusCode = 202
-  NotModified StatusCode = 304
-  BadRequest StatusCode = 400
-  Unauthorized StatusCode = 401
-  Forbidden StatusCode = 403
-  NotFound StatusCode = 404
-  ResouceNotAllowed StatusCode = 405
-  NotAcceptable StatusCode = 406
-  Conflict StatusCode = 409
-  PreconditionFailed StatusCode = 412
-  BadContentType StatusCode = 415
-  RequestedRangeNotSatisfiable StatusCode = 416
-  ExpectationFailed StatusCode = 417
-  InternalServerError StatusCode = 500
+  UnknownError = -1
+  UrlParseError = -2
+  JSONMarshalError = -3
+  JSONUnmarshalError = -4
+  OK = 200
+  Created = 201
+  Accepted = 202
+  NotModified = 304
+  BadRequest = 400
+  Unauthorized = 401
+  Forbidden = 403
+  NotFound = 404
+  ResouceNotAllowed = 405
+  NotAcceptable = 406
+  Conflict = 409
+  PreconditionFailed = 412
+  BadContentType = 415
+  RequestedRangeNotSatisfiable = 416
+  ExpectationFailed = 417
+  InternalServerError = 500
 )
 
 // Resource handles all requests to CouchDB
@@ -50,7 +51,7 @@ func NewResource(urlStr string, header *http.Header) (*Resource, error) {
   }
   var h *http.Header
   if header == nil {
-    h = make(http.Header)
+    h = new(http.Header)
   } else {
     h = header
   }
@@ -62,7 +63,7 @@ func NewResource(urlStr string, header *http.Header) (*Resource, error) {
 }
 
 // Head is a wrapper around http.Head
-func (r *Resource)Head(path string, header *http.Header, params url.Values) (StatusCode, *http.Header, []byte) {
+func (r *Resource)Head(path string, header *http.Header, params url.Values) (int, http.Header, []byte) {
   u, err := r.base.Parse(path)
   if err != nil {
     return UrlParseError, nil, nil
@@ -71,7 +72,7 @@ func (r *Resource)Head(path string, header *http.Header, params url.Values) (Sta
 }
 
 // Get is a wrapper around http.Get
-func Get(path string, header *http.Header, params url.Values) (StatusCode, *http.Header, []byte) {
+func (r *Resource)Get(path string, header *http.Header, params url.Values) (int, http.Header, []byte) {
   u, err := r.base.Parse(path)
   if err != nil {
     return UrlParseError, nil, nil
@@ -80,54 +81,109 @@ func Get(path string, header *http.Header, params url.Values) (StatusCode, *http
 }
 
 // Post is a wrapper around http.Post
-func Post(urlStr string, header http.Header, body []byte, params url.Values) (StatusCode, *http.Header, []byte) {}
+func (r *Resource)Post(path string, header *http.Header, body []byte, params url.Values) (int, http.Header, []byte) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+  return request(http.MethodPost, u, header, bytes.NewReader(body), params)
+}
 
 // Delete is a wrapper around http.Delete
-func Delete(urlStr string, header http.Header, params url.Values) (StatusCode, *http.Header, []byte) {}
+func (r *Resource)Delete(path string, header *http.Header, params url.Values) (int, http.Header, []byte) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+  return request(http.MethodDelete, u, header, nil, params)
+}
 
 // Put is a wrapper around http.Put
-func Put(urlStr string, header http.Header, body []byte, params url.Values) (StatusCode, *http.Header, []byte) {}
+func (r *Resource)Put(path string, header *http.Header, body []byte, params url.Values) (int, http.Header, []byte) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+  return request(http.MethodPut, u, header, bytes.NewReader(body), params)
+}
 
 // GetJSON issues a GET to the specified URL, with data returned as json
-func GetJSON(urlStr string, header http.Header, params url.Values) (StatusCode, *http.Header, map[string]interface{}) {}
+func (r *Resource)GetJSON(path string, header *http.Header, params url.Values) (int, http.Header, map[string]*json.RawMessage) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+  return requestJSON(http.MethodGet, u, header, nil, params)
+}
 
 // PostJSON issues a POST to the specified URL, with data returned as json
-func PostJSON(urlStr string, header http.Header, body map[string]interface{}, params url.Values) (StatusCode, *http.Header, map[string]interface{}) {}
+func (r *Resource)PostJSON(path string, header *http.Header, body map[string]interface{}, params url.Values) (int, http.Header, map[string]*json.RawMessage) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+
+  jsonBody, err := json.Marshal(body)
+  if err != nil {
+    return JSONMarshalError, nil, nil
+  }
+
+  return requestJSON(http.MethodPost, u, header, bytes.NewReader(jsonBody), params)
+}
 
 // DeleteJSON issues a DELETE to the specified URL, with data returned as json
-func DeleteJSON(urlStr string, header http.Header, params url.Values) (StatusCode, *http.Header, map[string]interface{}) {}
+func (r *Resource)DeleteJSON(path string, header *http.Header, params url.Values) (int, http.Header, map[string]*json.RawMessage) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
+  }
+
+  return requestJSON(http.MethodDelete, u, header, nil, params)
+}
 
 // PutJSON issues a PUT to the specified URL, with data returned as json
-func PutJSON(urlStr string, header http.Header, body map[string]interface{}, params url.Values) (StatusCode, *http.Header, map[string]*json.RawMessage) {}
-
-// helper function to make real request
-func requestJSON(method string, urlStr string, header *http.Header, body io.Reader, params url.Values) (StatusCode, *http.Header, map[string]interface{}) {
-  statusCode, header, data := request(method, url, header, body, params)
-  if header != nil && data != nil && header.Get("Content-type") == "application/json" {
-    var jsonData map[string]interface{}
-    err := json.Unmarshal(data, &jsonData)
-    if err != nil {
-      return UnknownError, nil, nil
-    }
-    return statusCode, header, jsonData
+func (r *Resource)PutJSON(path string, header *http.Header, body map[string]interface{}, params url.Values) (int, http.Header, map[string]*json.RawMessage) {
+  u, err := r.base.Parse(path)
+  if err != nil {
+    return UrlParseError, nil, nil
   }
-  return statusCode, header, nil
+
+  jsonBody, err := json.Marshal(body)
+  if err != nil {
+    return JSONMarshalError, nil, nil
+  }
+
+  return requestJSON(http.MethodPut, u, header, bytes.NewReader(jsonBody), params)
 }
 
 // helper function to make real request
-func request(method string, u *url.URL, header *http.Header, body io.Reader, params url.Values) (StatusCode, *http.Header, []byte) {
+func requestJSON(method string, u *url.URL, header *http.Header, body io.Reader, params url.Values) (int, http.Header, map[string]*json.RawMessage) {
+  s, h, d := request(method, u, header, body, params)
+  if d != nil && h.Get("Content-type") == "application/json" {
+    var jsonData map[string]*json.RawMessage
+    err := json.Unmarshal(d, &jsonData)
+    if err != nil {
+      return JSONUnmarshalError, h, nil
+    }
+    return s, h, jsonData
+  }
+  return s, h, nil
+}
+
+// helper function to make real request
+func request(method string, u *url.URL, header *http.Header, body io.Reader, params url.Values) (int, http.Header, []byte) {
   method = strings.ToUpper(method)
 
   u.RawQuery = params.Encode()
   var username, password string
   if u.User != nil {
     username = u.User.Username()
-    password, _ := u.User.Password()
+    password, _ = u.User.Password()
   }
 
   req, err := http.NewRequest(method, u.String(), body)
   if err != nil {
-    return UnknownError, nil, nil
+    return UnknownError, req.Header, nil
   }
 
   if len(username) > 0 && len(password) > 0 {
@@ -135,13 +191,13 @@ func request(method string, u *url.URL, header *http.Header, body io.Reader, par
   }
 
   // Accept and Content-type are highly recommended for CouchDB
-  setDefault(req.Header, "Accept", "application/json")
-  setDefault(req.Header, "Content-type", "application/json")
+  setDefault(&req.Header, "Accept", "application/json")
+  setDefault(&req.Header, "Content-type", "application/json")
   updateHeader(&req.Header, header)
 
   rsp, err := http.DefaultClient.Do(req)
   if err != nil {
-    return UnknownError, nil, nil
+    return UnknownError, rsp.Header, nil
   }
   defer rsp.Body.Close()
   data, err := ioutil.ReadAll(rsp.Body)
@@ -158,7 +214,7 @@ func setDefault(header *http.Header, key, value string) {
 
 // updateHeader updates existing header with new values
 func updateHeader(header *http.Header, extra *http.Header) {
-  for k, _ := range extra {
-    header.Set(extra.Get(k))
+  for k, _ := range *extra {
+    header.Set(k, extra.Get(k))
   }
 }
