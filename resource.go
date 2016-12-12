@@ -214,7 +214,9 @@ func setDefault(header *http.Header, key, value string) {
 
 // updateHeader updates existing header with new values
 func updateHeader(header *http.Header, extra *http.Header) {
-  for k, _ := range *extra {
-    header.Set(k, extra.Get(k))
+  if header != nil && extra != nil {
+    for k, _ := range *extra {
+      header.Set(k, extra.Get(k))
+    }
   }
 }
