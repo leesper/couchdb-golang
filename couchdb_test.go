@@ -32,11 +32,26 @@ func TestActiveTasks(t *testing.T) {
 
 func TestDBs(t *testing.T) {
   dbs := s.DBs()
-  if reflect.ValueOf(dbs).Kind() != reflect.Slice {
-    t.Error(`dbs should be slice`)
+  kind := reflect.ValueOf(dbs).Kind()
+  elemKind := reflect.TypeOf(dbs).Elem().Kind() != reflect.String
+  if kind != reflect.Slice || elemKind != reflect.String {
+    t.Error(`dbs shold be string slice`)
+  }
+}
+
+func TestMembership(t *testing.T) {
+  clusterNodes, allNodes := s.Membership()
+  kind := reflect.ValueOf(clusterNodes).Kind()
+  elemKind := reflect.ValueOf(allNodes).Elem().Kind()
+
+  if kind != reflect.Slice || elemKind != reflect.String {
+    t.Error(`clusterNodes should be`)
   }
 
-  if reflect.TypeOf(dbs).Elem().Kind() != reflect.String {
-    t.Error(`dbs shold be string slice`)
+  kind = reflect.ValueOf(allNodes).Kind()
+  elemKind = reflect.ValueOf(allNodes).Elem().Kind()
+
+  if kind != reflect.Slice || elemKind != reflect.String {
+    t.Error(`allNodes should be`)
   }
 }
