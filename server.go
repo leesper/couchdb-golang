@@ -2,8 +2,9 @@ package couchdb
 
 import(
   "encoding/json"
-  "net/url"
   // "log"
+  "net/url"
+  "strconv"
 )
 
 type Server struct {
@@ -53,7 +54,6 @@ func (s *Server)DBs() []string {
     return nil
   }
   _ = json.Unmarshal(*jsonData, &dbs)
-
   return dbs
 }
 
@@ -105,4 +105,45 @@ func (s *Server)Replicate(source, target string, options map[string]interface{})
   _ = json.Unmarshal(*jsonData, &jsonMap)
 
   return jsonMap
+}
+
+// Stats returns a JSON object containing the statistics for the running server.
+// func (s *Server)Stats(entry string) map[string]interface{} {
+//   var jsonMap map[string]interface{}
+//   _, _, jsonData := s.resource.GetJSON("_stats", nil, url.Values{})
+//   if jsonData != nil {
+//     return nil
+//   }
+//
+//   _ = json.Unmarshal(*jsonData, &jsonMap)
+//   log.Println(jsonMap, len(jsonMap))
+//   return jsonMap
+// }
+
+// UUIDs requests one or more Universally Unique Identifiers from the CouchDB instance.
+// The response is a JSON object providing a list of UUIDs.
+// count - Number of UUIDs to return. Default is 1.
+func (s *Server)UUIDs(count int) []string {
+  if count <= 0 {
+    count = 1
+  }
+
+  values := url.Values{}
+  values.Set("count", strconv.Itoa(count))
+
+  _, _, jsonData := s.resource.GetJSON("_uuids", nil, values)
+  if jsonData == nil {
+    return nil
+  }
+
+  var jsonMap map[string]*json.RawMessage
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+  if _, ok := jsonMap["uuids"]; !ok {
+    return nil
+  }
+
+  var uuids []string
+  _ = json.Unmarshal(*jsonMap["uuids"], &uuids)
+
+  return uuids
 }

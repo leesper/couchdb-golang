@@ -1,7 +1,6 @@
 package couchdb
 
 import (
-  // "log"
   "reflect"
   "strings"
   "testing"
@@ -49,14 +48,14 @@ func TestMembership(t *testing.T) {
   elemKind := reflect.TypeOf(allNodes).Elem().Kind()
 
   if kind != reflect.Slice || elemKind != reflect.String {
-    t.Error(`clusterNodes should be`)
+    t.Error(`clusterNodes should be slice of string`)
   }
 
   kind = reflect.ValueOf(clusterNodes).Kind()
   elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
 
   if kind != reflect.Slice || elemKind != reflect.String {
-    t.Error(`allNodes should be`)
+    t.Error(`allNodes should be slice of string`)
   }
 }
 
@@ -64,5 +63,22 @@ func TestReplicate(t *testing.T) {
   rsp := s.Replicate("db_a", "db_b", nil)
   if reflect.ValueOf(rsp).Kind() != reflect.Map {
     t.Error(`should return a map`)
+  }
+}
+
+// func TestStats(t *testing.T) {
+//   stats := s.Stats()
+//   if reflect.ValueOf(stats).Kind() != reflect.Map {
+//     t.Error(`should return a map`)
+//   }
+// }
+
+func TestUUIDs(t *testing.T) {
+  uuids := s.UUIDs(10)
+  kind := reflect.ValueOf(uuids).Kind()
+  elemKind := reflect.TypeOf(uuids).Elem().Kind()
+
+  if kind != reflect.Slice || elemKind != reflect.String {
+    t.Error(`should return slice of string`)
   }
 }
