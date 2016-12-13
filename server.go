@@ -147,3 +147,32 @@ func (s *Server)UUIDs(count int) []string {
 
   return uuids
 }
+
+// Create creates a database with the given name. Return false if failed
+// TODO: return Database instance if success
+func (s *Server)Create(db string) bool {
+  var jsonMap map[string]interface{}
+
+  _, _, jsonData := s.resource.PutJSON(db, nil, nil, url.Values{})
+  if jsonData == nil {
+    return false
+  }
+
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+  _, ok := jsonMap["ok"]
+  return ok
+}
+
+// Delete deletes a database with the given name. Return false if failed
+func (s *Server)Delete(db string) bool {
+  var jsonMap map[string]interface{}
+
+  _, _, jsonData := s.resource.DeleteJSON(db, nil, url.Values{})
+  if jsonData == nil {
+    return false
+  }
+
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+  _, ok := jsonMap["ok"]
+  return ok
+}

@@ -82,3 +82,15 @@ func TestUUIDs(t *testing.T) {
     t.Error(`should return slice of string`)
   }
 }
+
+func TestCreate(t *testing.T) {
+  if ok := s.Create("hello_couch"); !ok {
+    t.Error(`create db failed`)
+  }
+}
+
+func TestDelete(t *testing.T) {
+  if ok := s.Delete("hello_couch"); !ok {
+    t.Error(`delete db failed`)
+  }
+}
