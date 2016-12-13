@@ -176,3 +176,6 @@ func (s *Server)Delete(db string) bool {
   _, ok := jsonMap["ok"]
   return ok
 }
+
+// AddUser adds regular user in authentication database.
+// RemoveUser removes regular user in authentication database.
