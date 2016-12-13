@@ -3,13 +3,14 @@ package couchdb
 import(
   "encoding/json"
   "net/url"
-  // "log"
+  "log"
 )
 
 type Server struct {
   resource *Resource
 }
 
+// NewServer creates an object on behalf of CouchDB instance in address urlStr.
 func NewServer(urlStr string) *Server {
   res, _ := NewResource(urlStr, nil)
   return &Server{
@@ -17,22 +18,22 @@ func NewServer(urlStr string) *Server {
   }
 }
 
+// Version returns the version info about CouchDB instance.
 func (s *Server)Version() string {
-  var version string
-  var jsonMap map[string]*json.RawMessage
+  var jsonMap map[string]interface{}
 
   _, _, jsonData := s.resource.GetJSON("", nil, url.Values{})
   if jsonData == nil {
-    return version
+    return ""
   }
   _ = json.Unmarshal(*jsonData, &jsonMap)
-  _ = json.Unmarshal(*jsonMap["version"], &version)
 
-  return version
+  return jsonMap["version"].(string)
 }
 
-func (s *Server)ActiveTasks() []*json.RawMessage {
-  var jsonArr []*json.RawMessage
+// ActiveTasks lists of running tasks.
+func (s *Server)ActiveTasks() []interface{} {
+  var jsonArr []interface{}
 
   _, _, jsonData := s.resource.GetJSON("_active_tasks", nil, url.Values{})
   if jsonData == nil {
@@ -43,6 +44,7 @@ func (s *Server)ActiveTasks() []*json.RawMessage {
   return jsonArr
 }
 
+// DBs returns a list of all the databases in the CouchDB instance.
 func (s *Server)DBs() []string {
   var dbs []string
 
@@ -55,9 +57,11 @@ func (s *Server)DBs() []string {
   return dbs
 }
 
+
+// Membership displays the nodes that are part of the cluster as clusterNodes.
+// The field allNodes displays all nodes this node knows about, including the
+// ones that are part of cluster.
 func (s *Server)Membership() ([]string, []string) {
-  var allNodes []string
-  var clusterNodes []string
   var jsonMap map[string]*json.RawMessage
 
   _, _, jsonData := s.resource.GetJSON("_membership", nil, url.Values{})
@@ -69,6 +73,9 @@ func (s *Server)Membership() ([]string, []string) {
   if _, ok := jsonMap["error"]; ok {
     return nil, nil
   }
+
+  var allNodes []string
+  var clusterNodes []string
 
   _ = json.Unmarshal(*jsonMap["all_nodes"], &allNodes)
   _ = json.Unmarshal(*jsonMap["cluster_nodes"], &clusterNodes)
