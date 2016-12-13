@@ -3,7 +3,7 @@ package couchdb
 import(
   "encoding/json"
   "net/url"
-  "log"
+  // "log"
 )
 
 type Server struct {
@@ -81,4 +81,28 @@ func (s *Server)Membership() ([]string, []string) {
   _ = json.Unmarshal(*jsonMap["cluster_nodes"], &clusterNodes)
 
   return allNodes, clusterNodes
+}
+
+// Replicate requests, configure or stop a replication operation.
+func (s *Server)Replicate(source, target string, options map[string]interface{}) map[string]interface{} {
+  var jsonMap map[string]interface{}
+
+  body := map[string]interface{} {
+    "source": source,
+    "target": target,
+  }
+
+  if options != nil {
+    for k, v := range options {
+      body[k] = v
+    }
+  }
+
+  _, _, jsonData := s.resource.PostJSON("_replicate", nil, body, url.Values{})
+  if jsonData == nil {
+    return nil
+  }
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+
+  return jsonMap
 }

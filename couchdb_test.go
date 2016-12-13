@@ -59,3 +59,10 @@ func TestMembership(t *testing.T) {
     t.Error(`allNodes should be`)
   }
 }
+
+func TestReplicate(t *testing.T) {
+  rsp := s.Replicate("db_a", "db_b", nil)
+  if reflect.ValueOf(rsp).Kind() != reflect.Map {
+    t.Error(`should return a map`)
+  }
+}
