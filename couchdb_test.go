@@ -10,7 +10,7 @@ import (
 var s *Server
 
 func init() {
-  s = NewServer("http://localhost:5984")
+  s = NewServer("http://root:likejun@localhost:5984")
 }
 
 func TestVersion(t *testing.T) {
@@ -33,23 +33,27 @@ func TestActiveTasks(t *testing.T) {
 func TestDBs(t *testing.T) {
   dbs := s.DBs()
   kind := reflect.ValueOf(dbs).Kind()
-  elemKind := reflect.TypeOf(dbs).Elem().Kind() != reflect.String
+  elemKind := reflect.TypeOf(dbs).Elem().Kind()
   if kind != reflect.Slice || elemKind != reflect.String {
     t.Error(`dbs shold be string slice`)
   }
 }
 
 func TestMembership(t *testing.T) {
-  clusterNodes, allNodes := s.Membership()
-  kind := reflect.ValueOf(clusterNodes).Kind()
-  elemKind := reflect.ValueOf(allNodes).Elem().Kind()
+  allNodes, clusterNodes := s.Membership()
+  if allNodes == nil || clusterNodes == nil {
+    t.Error(`unauthorized`)
+  }
+
+  kind := reflect.ValueOf(allNodes).Kind()
+  elemKind := reflect.TypeOf(allNodes).Elem().Kind()
 
   if kind != reflect.Slice || elemKind != reflect.String {
     t.Error(`clusterNodes should be`)
   }
 
-  kind = reflect.ValueOf(allNodes).Kind()
-  elemKind = reflect.ValueOf(allNodes).Elem().Kind()
+  kind = reflect.ValueOf(clusterNodes).Kind()
+  elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
 
   if kind != reflect.Slice || elemKind != reflect.String {
     t.Error(`allNodes should be`)

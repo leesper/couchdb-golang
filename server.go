@@ -54,3 +54,24 @@ func (s *Server)DBs() []string {
 
   return dbs
 }
+
+func (s *Server)Membership() ([]string, []string) {
+  var allNodes []string
+  var clusterNodes []string
+  var jsonMap map[string]*json.RawMessage
+
+  _, _, jsonData := s.resource.GetJSON("_membership", nil, url.Values{})
+  if jsonData == nil {
+    return nil, nil
+  }
+
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+  if _, ok := jsonMap["error"]; ok {
+    return nil, nil
+  }
+
+  _ = json.Unmarshal(*jsonMap["all_nodes"], &allNodes)
+  _ = json.Unmarshal(*jsonMap["cluster_nodes"], &clusterNodes)
+
+  return allNodes, clusterNodes
+}
