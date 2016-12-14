@@ -154,32 +154,28 @@ func (s *Server)UUIDs(count int) []string {
 }
 
 // Create creates a database with the given name. Return false if failed.
-// TODO: return Database instance if success
-func (s *Server)Create(db string) bool {
-  var jsonMap map[string]interface{}
-
-  _, _, jsonData := s.resource.PutJSON(db, nil, nil, url.Values{})
-  if jsonData == nil {
-    return false
+func (s *Server)Create(name string) (*Database, bool) {
+  status, _, _ := s.resource.PutJSON(name, nil, nil, url.Values{})
+  if status != Created {
+    return nil, false
   }
 
-  _ = json.Unmarshal(*jsonData, &jsonMap)
-  _, ok := jsonMap["ok"]
-  return ok
+  db := s.GetDatabase(name)
+  if db == nil {
+    return nil, false
+  }
+
+  return db, true
 }
 
 // Delete deletes a database with the given name. Return false if failed.
 func (s *Server)Delete(db string) bool {
-  var jsonMap map[string]interface{}
+  status, _, _ := s.resource.DeleteJSON(db, nil, url.Values{})
 
-  _, _, jsonData := s.resource.DeleteJSON(db, nil, url.Values{})
-  if jsonData == nil {
-    return false
+  if status == OK {
+    return true
   }
-
-  _ = json.Unmarshal(*jsonData, &jsonMap)
-  _, ok := jsonMap["ok"]
-  return ok
+  return false
 }
 
 // GetDatabase gets a database instance with the given name. Return nil if failed.

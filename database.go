@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+  "encoding/json"
   "net/url"
   "os"
   "strings"
@@ -56,4 +57,21 @@ func NewDatabase(urlStr string) *Database {
   return &Database{
     resource: res,
   }
+}
+
+// Name returns the name of database
+func (d *Database) Name() string {
+  _, _, jsonData := d.resource.GetJSON("", nil, url.Values{})
+
+  if jsonData == nil {
+    return ""
+  }
+
+  var jsonMap map[string]interface{}
+  _ = json.Unmarshal(*jsonData, &jsonMap)
+  if _, ok := jsonMap["db_name"]; !ok {
+    return ""
+  }
+
+  return jsonMap["db_name"].(string)
 }

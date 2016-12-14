@@ -91,7 +91,7 @@ func TestUUIDs(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-  if ok := s.Create("hello_couch"); !ok {
+  if _, ok := s.Create("hello_couch"); !ok {
     t.Error(`create db failed`)
   }
 }
@@ -103,8 +103,8 @@ func TestDelete(t *testing.T) {
 }
 
 func TestGetDatabase(t *testing.T) {
-  s.Create("hello_couch")
-  if db := s.GetDatabase("hello_couch"); db == nil {
+  _, ok := s.Create("hello_couch")
+  if !ok {
     t.Error(`get db failed`)
   }
   s.Delete("hello_couch")
@@ -114,4 +114,16 @@ func TestGetNotExistDatabase(t *testing.T) {
   if db := s.GetDatabase("_not_exist"); db != nil {
     t.Error(`db should be nil`)
   }
+}
+
+func TestDatabaseName(t *testing.T) {
+  s.Create("hello_couch")
+  db := NewDatabase("http://root:likejun@localhost:5984/hello_couch")
+  if (db == nil) {
+    t.Error(`db should be non-nil`)
+  }
+  if (db.Name() != "hello_couch") {
+    t.Error(`should return db name`)
+  }
+  s.Delete("hello_couch")
 }
