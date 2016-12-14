@@ -133,3 +133,7 @@ func TestDatabaseName(t *testing.T) {
   }
   s.Delete("hello_couch")
 }
+
+func TestDatabaseSave(t *testing.T) {
+  
+}
