@@ -14,14 +14,28 @@ type Server struct {
 
 // NewServer creates an object on behalf of CouchDB instance in address urlStr.
 func NewServer(urlStr string) *Server {
-  res, err := NewResource(urlStr, nil)
-  if err != nil {
+  res := NewResource(urlStr, nil)
+  if res == nil {
     return nil
   }
 
   return &Server{
     resource: res,
   }
+}
+
+// NewServerFullCommit creates a CouchDB instance in address urlStr.
+// Disable X-Couch-Full-Commit by setting fullCommit to false.
+func NewServerFullCommit(urlStr string, fullCommit bool) *Server {
+  s := NewServer(urlStr)
+  if s == nil {
+    return nil
+  }
+
+  if !fullCommit {
+    s.resource.header.Set("X-Couch-Full-Commit", "false")
+  }
+  return s
 }
 
 // Version returns the version info about CouchDB instance.
@@ -180,14 +194,16 @@ func (s *Server)Delete(db string) bool {
 
 // GetDatabase gets a database instance with the given name. Return nil if failed.
 func (s *Server)GetDatabase(name string) *Database {
-  dbResStr := s.newResource(name)
-  if len(dbResStr) == 0 {
+  res := s.resource.NewResourceWithURL(name)
+  if res == nil {
     return nil
   }
-  db := NewDatabase(dbResStr)
+
+  db := NewDatabaseWithResource(res)
   if db == nil {
     return nil
   }
+
   status, _, _ := db.resource.Head("", nil, url.Values{})
   if status != OK {
     return nil

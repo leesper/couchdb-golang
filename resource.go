@@ -45,22 +45,36 @@ type Resource struct {
 }
 
 // NewResource returns a newly-created Resource instance
-func NewResource(urlStr string, header *http.Header) (*Resource, error) {
+func NewResource(urlStr string, header *http.Header) *Resource {
   u, err := url.Parse(urlStr)
   if err != nil {
-    return nil, err
+    return nil
   }
-  var h *http.Header
-  if header == nil {
-    h = new(http.Header)
-  } else {
-    h = header
+
+  h := new(http.Header)
+  if header != nil {
+    *h = *header
   }
 
   return &Resource{
     header: h,
     base: u,
-  }, nil
+  }
+}
+
+func (r *Resource)NewResourceWithURL(resStr string) *Resource {
+  u, err := r.base.Parse(resStr)
+  if err != nil {
+    return nil
+  }
+
+  h := new(http.Header)
+  *h = *r.header
+
+  return &Resource{
+    header: h,
+    base: u,
+  }
 }
 
 // Head is a wrapper around http.Head

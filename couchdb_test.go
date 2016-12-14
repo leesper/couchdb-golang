@@ -90,13 +90,19 @@ func TestUUIDs(t *testing.T) {
   }
 }
 
-func TestCreate(t *testing.T) {
+func TestCreateDatabase(t *testing.T) {
   if _, ok := s.Create("hello_couch"); !ok {
     t.Error(`create db failed`)
   }
 }
 
-func TestDelete(t *testing.T) {
+func TestCreateDatabaseIllegal(t *testing.T) {
+  if _, ok := s.Create("_db"); ok {
+    t.Error(`create _db should not succeed`)
+  }
+}
+
+func TestDeleteDatabase(t *testing.T) {
   if ok := s.Delete("hello_couch"); !ok {
     t.Error(`delete db failed`)
   }

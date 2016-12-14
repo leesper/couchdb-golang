@@ -48,12 +48,18 @@ func NewDatabase(urlStr string) *Database {
   } else {
     dbUrlStr = urlStr
   }
-  res, err := NewResource(dbUrlStr, nil)
+  res := NewResource(dbUrlStr, nil)
 
-  if err != nil {
+  if res == nil {
     return nil
   }
 
+  return &Database{
+    resource: res,
+  }
+}
+
+func NewDatabaseWithResource(res *Resource) *Database {
   return &Database{
     resource: res,
   }
