@@ -12,6 +12,13 @@ func init() {
   s = NewServer("http://root:likejun@localhost:5984")
 }
 
+func TestNewServer(t *testing.T) {
+  server := NewServer(DEFAULT_BASE_URL)
+  if server == nil {
+    t.Error(`server should be non-nil`)
+  }
+}
+
 func TestVersion(t *testing.T) {
   version := s.Version()
   if reflect.ValueOf(version).Kind() != reflect.String {
@@ -92,5 +99,19 @@ func TestCreate(t *testing.T) {
 func TestDelete(t *testing.T) {
   if ok := s.Delete("hello_couch"); !ok {
     t.Error(`delete db failed`)
+  }
+}
+
+func TestGetDatabase(t *testing.T) {
+  s.Create("hello_couch")
+  if db := s.GetDatabase("hello_couch"); db == nil {
+    t.Error(`get db failed`)
+  }
+  s.Delete("hello_couch")
+}
+
+func TestGetNotExistDatabase(t *testing.T) {
+  if db := s.GetDatabase("_not_exist"); db != nil {
+    t.Error(`db should be nil`)
   }
 }

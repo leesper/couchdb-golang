@@ -7,13 +7,18 @@ import(
   "strconv"
 )
 
+// Server represents a CouchDB server instance.
 type Server struct {
   resource *Resource
 }
 
 // NewServer creates an object on behalf of CouchDB instance in address urlStr.
 func NewServer(urlStr string) *Server {
-  res, _ := NewResource(urlStr, nil)
+  res, err := NewResource(urlStr, nil)
+  if err != nil {
+    return nil
+  }
+
   return &Server{
     resource: res,
   }
@@ -148,7 +153,7 @@ func (s *Server)UUIDs(count int) []string {
   return uuids
 }
 
-// Create creates a database with the given name. Return false if failed
+// Create creates a database with the given name. Return false if failed.
 // TODO: return Database instance if success
 func (s *Server)Create(db string) bool {
   var jsonMap map[string]interface{}
@@ -163,7 +168,7 @@ func (s *Server)Create(db string) bool {
   return ok
 }
 
-// Delete deletes a database with the given name. Return false if failed
+// Delete deletes a database with the given name. Return false if failed.
 func (s *Server)Delete(db string) bool {
   var jsonMap map[string]interface{}
 
@@ -175,6 +180,32 @@ func (s *Server)Delete(db string) bool {
   _ = json.Unmarshal(*jsonData, &jsonMap)
   _, ok := jsonMap["ok"]
   return ok
+}
+
+// GetDatabase gets a database instance with the given name. Return nil if failed.
+func (s *Server)GetDatabase(name string) *Database {
+  dbResStr := s.newResource(name)
+  if len(dbResStr) == 0 {
+    return nil
+  }
+  db := NewDatabase(dbResStr)
+  if db == nil {
+    return nil
+  }
+  status, _, _ := db.resource.Head("", nil, url.Values{})
+  if status != OK {
+    return nil
+  }
+  return db
+}
+
+// newResource returns an url string representing a resource under server.
+func (s *Server)newResource(resource string) string {
+  resourceUrl, err := s.resource.base.Parse(resource)
+  if err != nil {
+    return ""
+  }
+  return resourceUrl.String()
 }
 
 // AddUser adds regular user in authentication database.

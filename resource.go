@@ -44,6 +44,7 @@ type Resource struct {
   base *url.URL
 }
 
+// NewResource returns a newly-created Resource instance
 func NewResource(urlStr string, header *http.Header) (*Resource, error) {
   u, err := url.Parse(urlStr)
   if err != nil {
