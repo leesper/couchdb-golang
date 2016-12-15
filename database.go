@@ -86,9 +86,16 @@ func (d *Database)Name() string {
   return jsonMap["db_name"].(string)
 }
 
-// Aavailable returns true if the database is good to go
+// Aavailable returns true if the database is good to go.
 func (d *Database)Available() bool {
   status, _, _ := d.resource.Head("", nil, nil)
+  return status == OK
+}
+
+// Contains returns true if the database contains a document with the specified ID.
+func (d *Database)Contains(docid string) bool {
+  docRes := docResource(d.resource, docid)
+  status, _, _ := docRes.Head("", nil, nil)
   return status == OK
 }
 

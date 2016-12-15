@@ -168,3 +168,19 @@ func TestDatabaseAvailable(t *testing.T) {
   }
   s.Delete("golang-tests")
 }
+
+func TestDatabaseContains(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "Jason Statham",
+  }
+  id, _ := db.Save(doc)
+  if len(id) <= 0 {
+    t.Error(`should return non-empty id`)
+  }
+  if !db.Contains(id) {
+    t.Error(`should contain id ` + id)
+  }
+  s.Delete("golang-tests")
+}
