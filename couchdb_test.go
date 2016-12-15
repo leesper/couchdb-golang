@@ -203,3 +203,32 @@ func TestDatabaseSetGetDelete(t *testing.T) {
   }
   s.Delete("golang-tests")
 }
+
+func TestDatabaseDocIDsAndLen(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "Jason Statham",
+  }
+
+  if !db.Set("Mechanic", doc) {
+    t.Error(`set should return true`)
+  }
+
+  ids := db.DocIDs()
+  if ids == nil {
+    t.Error(`should return slice of string`)
+  }
+
+  if len(ids) != 1 {
+    t.Error(`should return 1`)
+  }
+
+  if db.Len() != 1 {
+    t.Error(`Len() should return 1`)
+  }
+
+  s.Delete("golang-tests")
+}
+
+func TestDatabaseLen(t *testing.T) {}

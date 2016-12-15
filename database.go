@@ -71,19 +71,26 @@ func NewDatabaseWithResource(res *Resource) *Database {
 
 // Name returns the name of database.
 func (d *Database)Name() string {
+  info := d.databaseInfo()
+  if _, ok := info["db_name"]; !ok {
+    return ""
+  }
+
+  return info["db_name"].(string)
+}
+
+func (d *Database)databaseInfo() map[string]interface{} {
   _, _, jsonData := d.resource.GetJSON("", nil, url.Values{})
 
-  if jsonData == nil {
-    return ""
-  }
-
   var jsonMap map[string]interface{}
-  json.Unmarshal(*jsonData, &jsonMap)
-  if _, ok := jsonMap["db_name"]; !ok {
-    return ""
+
+  if jsonData == nil {
+    return jsonMap
   }
 
-  return jsonMap["db_name"].(string)
+  json.Unmarshal(*jsonData, &jsonMap)
+
+  return jsonMap
 }
 
 // Aavailable returns true if the database is good to go.
@@ -144,6 +151,41 @@ func (d *Database)Set(docid string, doc map[string]interface{}) bool {
   return true
 }
 
+// DocIDs returns the IDs of all documents in database.
+func (d *Database)DocIDs() []string {
+  docRes := docResource(d.resource, "_all_docs")
+  status, _, data := docRes.GetJSON("", nil, nil)
+  if status != OK {
+    return nil
+  }
+  var jsonMap map[string]*json.RawMessage
+  json.Unmarshal(*data, &jsonMap)
+  if _, ok := jsonMap["rows"]; !ok {
+    return nil
+  }
+  var jsonArr []*json.RawMessage
+  json.Unmarshal(*jsonMap["rows"], &jsonArr)
+  if len(jsonArr) == 0 {
+    return nil
+  }
+  ids := make([]string, len(jsonArr))
+  for i, v := range jsonArr {
+    var row map[string]interface{}
+    json.Unmarshal(*v, &row)
+    ids[i] = row["id"].(string)
+  }
+  return ids
+}
+
+// Len returns the number of documents stored in it.
+func (d *Database)Len() int {
+  info := d.databaseInfo()
+  if count, ok := info["doc_count"]; ok {
+    return int(count.(float64))
+  }
+  return -1
+}
+
 // Save creates a new document or update an existing document.
 // If doc has no _id the server will generate a random UUID and a new document will be created.
 // Otherwise the doc's _id will be used to identify the document to create or update.
@@ -152,7 +194,7 @@ func (d *Database)Set(docid string, doc map[string]interface{}) bool {
 // To avoid such problems you can generate a UUID on the client side.
 // GenerateUUID provides a simple, platform-independent implementation.
 // You can also use other third-party packages instead.
-// doc: the document to create or update
+// doc: the document to create or update.
 func (d *Database)Save(doc map[string]interface{}) (string, string) {
 
   var id, rev string
