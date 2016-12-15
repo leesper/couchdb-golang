@@ -231,6 +231,12 @@ func TestDatabaseDocIDsAndLen(t *testing.T) {
   s.Delete("golang-tests")
 }
 
-func TestDatabaseCommit(t *testing.T) {}
+func TestDatabaseCommit(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  if !db.Commit() {
+    t.Error(`commit should be true`)
+  }
+  s.Delete("golang-tests")
+}
 
 func TestDataaseGetPutDeleteAttachment(t *testing.T) {}

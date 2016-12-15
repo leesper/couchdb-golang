@@ -256,7 +256,8 @@ func GenerateUUID() string {
 // "X-Couch-Full-Commit: false" header to disable immediate commits, this method
 // can be used to ensure that non-commited changes are commited to physical storage.
 func (d *Database)Commit() bool {
-  return true
+  status, _, _ := d.resource.PostJSON("_ensure_full_commit", nil, nil, nil)
+  return status == Created
 }
 
 func (d *Database)GetAttachment() {}
