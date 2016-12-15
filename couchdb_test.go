@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+  // "fmt"
   "reflect"
   "strings"
   "testing"
@@ -135,5 +136,27 @@ func TestDatabaseName(t *testing.T) {
 }
 
 func TestDatabaseSave(t *testing.T) {
-  
+  db, _ := s.Create("golang-tests")
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "John Doe",
+  }
+  id, rev := db.Save(doc, nil)
+  if len(id) == 0 || len(rev) == 0 {
+    t.Error(`should return non-empty id and rev`)
+  }
+
+  doc["name"] = "Jason Statham"
+  id, rev = db.Save(doc, nil)
+  if len(id) == 0 || len(rev) == 0 {
+    t.Error(`should return non-empty id and rev`)
+  }
+
+  doc["type"] = "Movie Star"
+  id, rev = db.Save(doc, nil)
+  if len(id) == 0 || len(rev) == 0 {
+    t.Error(`should return non-empty id and rev`)
+  }
+
+  s.Delete("golang-tests")
 }

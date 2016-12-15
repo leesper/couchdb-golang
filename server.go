@@ -42,7 +42,7 @@ func NewServerFullCommit(urlStr string, fullCommit bool) *Server {
 func (s *Server)Version() string {
   var jsonMap map[string]interface{}
 
-  _, _, jsonData := s.resource.GetJSON("", nil, url.Values{})
+  _, _, jsonData := s.resource.GetJSON("", nil, nil)
   if jsonData == nil {
     return ""
   }
@@ -55,7 +55,7 @@ func (s *Server)Version() string {
 func (s *Server)ActiveTasks() []interface{} {
   var jsonArr []interface{}
 
-  _, _, jsonData := s.resource.GetJSON("_active_tasks", nil, url.Values{})
+  _, _, jsonData := s.resource.GetJSON("_active_tasks", nil, nil)
   if jsonData == nil {
     return nil
   }
@@ -68,7 +68,7 @@ func (s *Server)ActiveTasks() []interface{} {
 func (s *Server)DBs() []string {
   var dbs []string
 
-  _, _, jsonData := s.resource.GetJSON("_all_dbs", nil, url.Values{})
+  _, _, jsonData := s.resource.GetJSON("_all_dbs", nil, nil)
   if jsonData == nil {
     return nil
   }
@@ -83,7 +83,7 @@ func (s *Server)DBs() []string {
 func (s *Server)Membership() ([]string, []string) {
   var jsonMap map[string]*json.RawMessage
 
-  _, _, jsonData := s.resource.GetJSON("_membership", nil, url.Values{})
+  _, _, jsonData := s.resource.GetJSON("_membership", nil, nil)
   if jsonData == nil {
     return nil, nil
   }
@@ -117,7 +117,7 @@ func (s *Server)Replicate(source, target string, options map[string]interface{})
     }
   }
 
-  _, _, jsonData := s.resource.PostJSON("_replicate", nil, body, url.Values{})
+  _, _, jsonData := s.resource.PostJSON("_replicate", nil, body, nil)
   if jsonData == nil {
     return nil
   }
@@ -167,24 +167,24 @@ func (s *Server)UUIDs(count int) []string {
   return uuids
 }
 
-// Create creates a database with the given name. Return false if failed.
+// Create returns a database instance with the given name, returns true if created,
+// if database already existed, returns false, *Database will be nil if failed.
 func (s *Server)Create(name string) (*Database, bool) {
-  status, _, _ := s.resource.PutJSON(name, nil, nil, url.Values{})
-  if status != Created {
+  status, _, _ := s.resource.PutJSON(name, nil, nil, nil)
+
+  // PreconditionFailed means database with the given name already existed
+  if status != Created && status != PreconditionFailed {
     return nil, false
   }
 
   db := s.GetDatabase(name)
-  if db == nil {
-    return nil, false
-  }
 
-  return db, true
+  return db, db != nil && status == Created
 }
 
 // Delete deletes a database with the given name. Return false if failed.
 func (s *Server)Delete(db string) bool {
-  status, _, _ := s.resource.DeleteJSON(db, nil, url.Values{})
+  status, _, _ := s.resource.DeleteJSON(db, nil, nil)
 
   if status == OK {
     return true
@@ -204,7 +204,7 @@ func (s *Server)GetDatabase(name string) *Database {
     return nil
   }
 
-  status, _, _ := db.resource.Head("", nil, url.Values{})
+  status, _, _ := db.resource.Head("", nil, nil)
   if status != OK {
     return nil
   }

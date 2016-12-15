@@ -63,7 +63,7 @@ func NewResource(urlStr string, header *http.Header) *Resource {
 }
 
 func (r *Resource)NewResourceWithURL(resStr string) *Resource {
-  u, err := r.base.Parse(resStr)
+  u, err := r.base.Parse(strings.Join([]string{r.base.Path, resStr}, "/"))
   if err != nil {
     return nil
   }

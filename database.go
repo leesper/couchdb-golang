@@ -104,15 +104,21 @@ func (d *Database)Save(doc map[string]interface{}, options url.Values) (string, 
   } else {
     httpFunc = d.resource.PostJSON
   }
+
   _, _, data := httpFunc("", nil, doc, options)
   var jsonMap map[string]interface{}
   _ = json.Unmarshal(*data, &jsonMap)
+
   if v, ok := jsonMap["id"]; ok {
     id = v.(string)
+    doc["_id"] = id
   }
+
   if v, ok := jsonMap["rev"]; ok {
     rev = v.(string)
+    doc["_rev"] = rev
   }
+
   return id, rev
 }
 
@@ -125,6 +131,7 @@ func docResource(res *Resource, docID string) *Resource {
     }
     return res
   }
+
   return res.NewResourceWithURL(docID)
 }
 
