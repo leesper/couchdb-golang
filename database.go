@@ -78,7 +78,7 @@ func (d *Database)Name() string {
   }
 
   var jsonMap map[string]interface{}
-  _ = json.Unmarshal(*jsonData, &jsonMap)
+  json.Unmarshal(*jsonData, &jsonMap)
   if _, ok := jsonMap["db_name"]; !ok {
     return ""
   }
@@ -99,6 +99,51 @@ func (d *Database)Contains(docid string) bool {
   return status == OK
 }
 
+// Get returns the document with the specified ID.
+func (d *Database)Get(docid string) map[string]interface{} {
+  docRes := docResource(d.resource, docid)
+  status, _, data := docRes.GetJSON("", nil, nil)
+  if status != OK {
+    return nil
+  }
+  var doc map[string]interface{}
+  json.Unmarshal(*data, &doc)
+  return doc
+}
+
+// Delete deletes the document with the specified ID.
+func (d *Database)Delete(docid string) bool {
+  docRes := docResource(d.resource, docid)
+  status, header, _ := docRes.Head("", nil, nil)
+  if status != OK {
+    return false
+  }
+  rev := strings.Trim(header.Get("ETag"), `"`)
+  params := url.Values{}
+  params.Set("rev", rev)
+  status, _, _ = docRes.DeleteJSON("", nil, params)
+  return status == OK
+}
+
+// Set creates or updates a document with the specified ID.
+func (d *Database)Set(docid string, doc map[string]interface{}) bool {
+  if doc == nil {
+    return false
+  }
+
+  docRes := docResource(d.resource, docid)
+  status, _, data := docRes.PutJSON("", nil, doc, nil)
+  if status != Created {
+    return false
+  }
+
+  var jsonMap map[string]interface{}
+  json.Unmarshal(*data, &jsonMap)
+  doc["_id"] = jsonMap["id"].(string)
+  doc["_rev"] = jsonMap["rev"].(string)
+  return true
+}
+
 // Save creates a new document or update an existing document.
 // If doc has no _id the server will generate a random UUID and a new document will be created.
 // Otherwise the doc's _id will be used to identify the document to create or update.
@@ -109,7 +154,12 @@ func (d *Database)Contains(docid string) bool {
 // You can also use other third-party packages instead.
 // doc: the document to create or update
 func (d *Database)Save(doc map[string]interface{}) (string, string) {
+
   var id, rev string
+  if doc == nil {
+    return id, rev
+  }
+
   var httpFunc func(string, *http.Header, map[string]interface{}, url.Values) (int, http.Header, *json.RawMessage)
   if v, ok := doc["_id"]; ok {
     httpFunc = docResource(d.resource, v.(string)).PutJSON
@@ -119,7 +169,7 @@ func (d *Database)Save(doc map[string]interface{}) (string, string) {
 
   _, _, data := httpFunc("", nil, doc, nil)
   var jsonMap map[string]interface{}
-  _ = json.Unmarshal(*data, &jsonMap)
+  json.Unmarshal(*data, &jsonMap)
 
   if v, ok := jsonMap["id"]; ok {
     id = v.(string)

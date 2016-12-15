@@ -195,7 +195,6 @@ func request(method string, u *url.URL, header *http.Header, body io.Reader, par
     username = u.User.Username()
     password, _ = u.User.Password()
   }
-
   req, err := http.NewRequest(method, u.String(), body)
   if err != nil {
     return UnknownError, req.Header, nil

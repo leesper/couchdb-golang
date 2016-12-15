@@ -184,3 +184,22 @@ func TestDatabaseContains(t *testing.T) {
   }
   s.Delete("golang-tests")
 }
+
+func TestDatabaseSetGetDelete(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "Jason Statham",
+  }
+  if !db.Set("Mechanic", doc) {
+    t.Error(`set should return true`)
+  }
+  fetched := db.Get("Mechanic")
+  if fetched == nil {
+    t.Error(`get should return non-nil`)
+  }
+  if !db.Delete("Mechanic") {
+    t.Error(`delete should return true`)
+  }
+  s.Delete("golang-tests")
+}
