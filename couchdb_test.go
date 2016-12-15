@@ -141,22 +141,30 @@ func TestDatabaseSave(t *testing.T) {
     "type": "Person",
     "name": "John Doe",
   }
-  id, rev := db.Save(doc, nil)
+  id, rev := db.Save(doc)
   if len(id) == 0 || len(rev) == 0 {
     t.Error(`should return non-empty id and rev`)
   }
 
   doc["name"] = "Jason Statham"
-  id, rev = db.Save(doc, nil)
+  id, rev = db.Save(doc)
   if len(id) == 0 || len(rev) == 0 {
     t.Error(`should return non-empty id and rev`)
   }
 
   doc["type"] = "Movie Star"
-  id, rev = db.Save(doc, nil)
+  id, rev = db.Save(doc)
   if len(id) == 0 || len(rev) == 0 {
     t.Error(`should return non-empty id and rev`)
   }
 
+  s.Delete("golang-tests")
+}
+
+func TestDatabaseAvailable(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  if !db.Available() {
+    t.Error(`database should be available`)
+  }
   s.Delete("golang-tests")
 }

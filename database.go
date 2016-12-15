@@ -86,6 +86,12 @@ func (d *Database)Name() string {
   return jsonMap["db_name"].(string)
 }
 
+// Aavailable returns true if the database is good to go
+func (d *Database)Available() bool {
+  status, _, _ := d.resource.Head("", nil, nil)
+  return status == OK
+}
+
 // Save creates a new document or update an existing document.
 // If doc has no _id the server will generate a random UUID and a new document will be created.
 // Otherwise the doc's _id will be used to identify the document to create or update.
@@ -95,8 +101,7 @@ func (d *Database)Name() string {
 // GenerateUUID provides a simple, platform-independent implementation.
 // You can also use other third-party packages instead.
 // doc: the document to create or update
-// options: optional args, such as batch='ok'
-func (d *Database)Save(doc map[string]interface{}, options url.Values) (string, string) {
+func (d *Database)Save(doc map[string]interface{}) (string, string) {
   var id, rev string
   var httpFunc func(string, *http.Header, map[string]interface{}, url.Values) (int, http.Header, *json.RawMessage)
   if v, ok := doc["_id"]; ok {
@@ -105,7 +110,7 @@ func (d *Database)Save(doc map[string]interface{}, options url.Values) (string, 
     httpFunc = d.resource.PostJSON
   }
 
-  _, _, data := httpFunc("", nil, doc, options)
+  _, _, data := httpFunc("", nil, doc, nil)
   var jsonMap map[string]interface{}
   _ = json.Unmarshal(*data, &jsonMap)
 
