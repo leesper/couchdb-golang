@@ -231,4 +231,6 @@ func TestDatabaseDocIDsAndLen(t *testing.T) {
   s.Delete("golang-tests")
 }
 
-func TestDatabaseLen(t *testing.T) {}
+func TestDatabaseCommit(t *testing.T) {}
+
+func TestDataaseGetPutDeleteAttachment(t *testing.T) {}

@@ -250,3 +250,17 @@ func GenerateUUID() string {
   uuid := fmt.Sprintf("%X-%X-%X-%X-%X", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
   return uuid
 }
+
+// Commit flushes any recent changes to the specified database to disk.
+// If the server is configured to delay commits or previous requests use the special
+// "X-Couch-Full-Commit: false" header to disable immediate commits, this method
+// can be used to ensure that non-commited changes are commited to physical storage.
+func (d *Database)Commit() bool {
+  return true
+}
+
+func (d *Database)GetAttachment() {}
+
+func (d *Database)PutAttachment() {}
+
+func (d *Database)DeleteAttachment() {}
