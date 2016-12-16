@@ -8,6 +8,7 @@ import (
   "net/http"
   "net/url"
   "os"
+  "strconv"
   "strings"
 )
 
@@ -385,4 +386,18 @@ func (d *Database)UpdateDocuments(docs []map[string]interface{}, options map[str
     }
   }
   return results, status == Created
+}
+
+// GetRevsLimit gets the current revs_limit(revision limit) setting.
+func (d *Database)GetRevsLimit() (int, bool) {
+  status, _, data := d.resource.Get("_revs_limit", nil, nil)
+  limit, err := strconv.Atoi(strings.Trim(string(data), "\n"))
+  return limit, status == OK && err == nil
+}
+
+// SetRevsLimit sets the maximum number of document revisions that will be
+// tracked by CouchDB.
+func (d *Database)SetRevsLimit(limit int) bool {
+  status, _, _ := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
+  return status == OK
 }

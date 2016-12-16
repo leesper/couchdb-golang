@@ -329,7 +329,7 @@ func TestUserManagement(t *testing.T) {
   if !ok {
     t.Error(`login should return true`)
   }
-  
+
   if !s.VerifyToken(token) {
     t.Error(`token should be valid`, token)
   }
@@ -341,4 +341,19 @@ func TestUserManagement(t *testing.T) {
   if !s.RemoveUser("foo") {
     t.Error(`remove user should return true`)
   }
+}
+
+func TestGetSetRevsLimit(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  if !db.SetRevsLimit(10) {
+    t.Error(`set revs limit should return true`)
+  }
+  limit, ok := db.GetRevsLimit()
+  if !ok {
+    t.Error(`get revs limit should return true`)
+  }
+  if limit != 10 {
+    t.Error(`limit should be 10`)
+  }
+  s.Delete("golang-tests")
 }
