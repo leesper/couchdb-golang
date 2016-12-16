@@ -265,7 +265,6 @@ func TestPutGetDeleteAttachment(t *testing.T) {
     "name": "Jason Statham",
   }
   db.Set(GenerateUUID(), doc)
-  mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
   if !db.PutAttachment(doc, tmpFile, mime.TypeByExtension(filepath.Ext(tmpFileName))) {
     t.Error(`put attachment should return true`)
   }
