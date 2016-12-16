@@ -284,3 +284,37 @@ func TestPutGetDeleteAttachment(t *testing.T) {
 
   s.Delete("golang-tests")
 }
+
+func TestUpdateDocuments(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  docs := []map[string]interface{}{
+    {
+      "type": "Person",
+      "name": "Jason Statham",
+    },
+    {
+      "type": "Person",
+      "name": "Sylvester Stallone",
+    },
+    {
+      "type": "Person",
+      "name": "Arnold Schwarzenegger",
+    },
+    {
+      "type": "Person",
+      "name": "Sam Worthington",
+    },
+  }
+
+  idRevs, ok := db.UpdateDocuments(docs, nil)
+
+  if !ok {
+    t.Error(`update documents should return true`)
+  }
+
+  if len(idRevs) != len(docs) {
+    t.Error(`update documents should return id and revs in`, len(docs))
+  }
+
+  s.Delete("golang-tests")
+}

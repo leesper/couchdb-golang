@@ -353,3 +353,36 @@ func (d *Database)DeleteAttachment(doc map[string]interface{}, fileName string) 
   }
   return status == OK
 }
+
+type IDRev struct {
+  Id string
+  Rev string
+}
+
+// UpdateDocuments performs a bulk update or creation of the given documents in a single HTTP request.
+func (d *Database)UpdateDocuments(docs []map[string]interface{}, options map[string]interface{}) ([]IDRev, bool) {
+  results := []IDRev{}
+
+  if docs == nil {
+    return results, false
+  }
+
+  body := map[string]interface{}{}
+  if options != nil {
+    for k, v := range options {
+      body[k] = v
+    }
+  }
+  body["docs"] = docs
+
+  status, _, data := d.resource.PostJSON("_bulk_docs", nil, body, nil)
+  if status == Created {
+    var jsonArr []map[string]interface{}
+    json.Unmarshal(*data, &jsonArr)
+    for _, ele := range jsonArr {
+      id, rev := ele["id"].(string), ele["rev"].(string)
+      results = append(results, IDRev{Id: id, Rev: rev})
+    }
+  }
+  return results, status == Created
+}
