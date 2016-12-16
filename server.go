@@ -2,9 +2,12 @@ package couchdb
 
 import(
   "encoding/json"
+  // "fmt"
   // "log"
+  "net/http"
   "net/url"
   "strconv"
+  "strings"
 )
 
 // Server represents a CouchDB server instance.
@@ -221,4 +224,66 @@ func (s *Server)newResource(resource string) string {
 }
 
 // AddUser adds regular user in authentication database.
+// Returns id and rev of the registered user.
+func (s *Server)AddUser(name, password string, roles []string) (string, string) {
+  db := s.GetDatabase("_users")
+  if db == nil {
+    return "", ""
+  }
+
+  if roles == nil {
+    roles = []string{}
+  }
+
+  userDoc := map[string]interface{}{
+    "_id": "org.couchdb.user:" + name,
+    "name": name,
+    "password": password,
+    "roles": roles,
+    "type": "user",
+  }
+
+  return db.Save(userDoc)
+}
+
+// Login regular user in CouchDB, returns authentication token.
+func (s *Server)Login(name, password string) (string, bool) {
+  body := map[string]interface{}{
+    "name": name,
+    "password": password,
+  }
+  status, header, _ := s.resource.PostJSON("_session", nil, body, nil)
+  if status != OK {
+    return "", false
+  }
+
+  tokenPart := strings.Split(header.Get("Set-Cookie"), ";")[0]
+  token := strings.Split(tokenPart, "=")[1]
+  return token, status == OK
+}
+
+// Verify regular user token
+func (s *Server)VerifyToken(token string) bool {
+  header := http.Header{}
+  header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
+  status, _, _ := s.resource.GetJSON("_session", &header, nil)
+  return status == OK
+}
+
+// Logout regular user in CouchDB
+func (s *Server)Logout(token string) bool {
+  header := http.Header{}
+  header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
+  status, _, _ := s.resource.DeleteJSON("_session", &header, nil)
+  return status == OK
+}
+
 // RemoveUser removes regular user in authentication database.
+func (s *Server)RemoveUser(name string) bool {
+  db := s.GetDatabase("_users")
+  if db == nil {
+    return false
+  }
+  docId := "org.couchdb.user:" + name
+  return db.Delete(docId)
+}

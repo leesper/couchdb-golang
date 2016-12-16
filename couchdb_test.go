@@ -318,3 +318,27 @@ func TestUpdateDocuments(t *testing.T) {
 
   s.Delete("golang-tests")
 }
+
+func TestUserManagement(t *testing.T) {
+  id, rev := s.AddUser("foo", "secret", []string{"hero"})
+  if len(id) == 0 || len(rev) == 0 {
+    t.Error(`add user should return non-empty id and rev`)
+  }
+
+  token, ok := s.Login("foo", "secret")
+  if !ok {
+    t.Error(`login should return true`)
+  }
+  
+  if !s.VerifyToken(token) {
+    t.Error(`token should be valid`, token)
+  }
+
+  if !s.Logout(token) {
+    t.Error(`logout should return true`)
+  }
+
+  if !s.RemoveUser("foo") {
+    t.Error(`remove user should return true`)
+  }
+}
