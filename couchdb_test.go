@@ -91,9 +91,13 @@ func TestUUIDs(t *testing.T) {
   }
 }
 
-func TestCreateDatabase(t *testing.T) {
-  if _, ok := s.Create("hello_couch"); !ok {
+func TestCreateDeleteDatabase(t *testing.T) {
+  if _, ok := s.Create("golang-tests"); !ok {
     t.Error(`create db failed`)
+  }
+
+  if ok := s.Delete("golang-tests"); !ok {
+    t.Error(`delete db failed`)
   }
 }
 
@@ -103,18 +107,12 @@ func TestCreateDatabaseIllegal(t *testing.T) {
   }
 }
 
-func TestDeleteDatabase(t *testing.T) {
-  if ok := s.Delete("hello_couch"); !ok {
-    t.Error(`delete db failed`)
-  }
-}
-
 func TestGetDatabase(t *testing.T) {
-  _, ok := s.Create("hello_couch")
+  _, ok := s.Create("golang-tests")
   if !ok {
     t.Error(`get db failed`)
   }
-  s.Delete("hello_couch")
+  s.Delete("golang-tests")
 }
 
 func TestGetNotExistDatabase(t *testing.T) {
@@ -124,15 +122,15 @@ func TestGetNotExistDatabase(t *testing.T) {
 }
 
 func TestDatabaseName(t *testing.T) {
-  s.Create("hello_couch")
-  db := NewDatabase("http://root:likejun@localhost:5984/hello_couch")
+  s.Create("golang-tests")
+  db := NewDatabase("http://root:likejun@localhost:5984/golang-tests")
   if (db == nil) {
     t.Error(`db should be non-nil`)
   }
-  if (db.Name() != "hello_couch") {
+  if (db.Name() != "golang-tests") {
     t.Error(`should return db name`)
   }
-  s.Delete("hello_couch")
+  s.Delete("golang-tests")
 }
 
 func TestDatabaseSave(t *testing.T) {
@@ -239,4 +237,4 @@ func TestDatabaseCommit(t *testing.T) {
   s.Delete("golang-tests")
 }
 
-func TestDataaseGetPutDeleteAttachment(t *testing.T) {}
+func TestGetPutDeleteAttachment(t *testing.T) {}
