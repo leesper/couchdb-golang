@@ -4,6 +4,7 @@ import (
   "crypto/rand"
   "encoding/json"
   "fmt"
+  "io/ioutil"
   "net/http"
   "net/url"
   "os"
@@ -247,7 +248,7 @@ func GenerateUUID() string {
     return ""
   }
 
-  uuid := fmt.Sprintf("%X-%X-%X-%X-%X", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+  uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
   return uuid
 }
 
@@ -260,8 +261,95 @@ func (d *Database)Commit() bool {
   return status == Created
 }
 
-func (d *Database)GetAttachment() {}
+// GetAttachment returns the file attachment associated with the document.
+// The raw data of the associated attachment is returned as a []byte.
+func (d *Database)GetAttachment(docid, fileName string) ([]byte, bool) {
+  // defensive check
+  if len(docid) == 0 || len(fileName) == 0 {
+    return nil, false
+  }
 
-func (d *Database)PutAttachment() {}
+  docRes := docResource(docResource(d.resource, docid), fileName)
+  status, _, data := docRes.Get("", nil, nil)
+  return data, status == OK
+}
 
-func (d *Database)DeleteAttachment() {}
+// PutAttachment uploads the supplied *os.File as an attachment to the specified document.
+// doc: the document that the attachment belongs to. Must have _id and _rev inside.
+func (d *Database)PutAttachment(doc map[string]interface{}, file *os.File, mimeType string) bool {
+  // defensive check
+  if doc == nil || file == nil || len(mimeType) == 0 {
+    return false
+  }
+
+  if _, ok := doc["_id"]; !ok {
+    return false
+  }
+  if _, ok := doc["_rev"]; !ok {
+    return false
+  }
+
+  id, rev := doc["_id"].(string), doc["_rev"].(string)
+
+  if len(id) == 0 || len(rev) == 0 {
+    return false
+  }
+
+  fileInfo, err := file.Stat()
+  if err != nil {
+    return false
+  }
+
+  contents, err := ioutil.ReadAll(file)
+  if err != nil {
+    return false
+  }
+
+  docRes := docResource(docResource(d.resource, id), fileInfo.Name())
+  header := http.Header{}
+  header.Set("Content-Type", mimeType)
+  params := url.Values{}
+  params.Set("rev", rev)
+
+  status, _, data := docRes.Put("", &header, contents, params)
+  if status == Created {
+    var jsonMap map[string]interface{}
+    json.Unmarshal(data, &jsonMap)
+    doc["_rev"] = jsonMap["rev"].(string)
+  }
+
+  return status == Created
+}
+
+// DeleteAttachment deletes the specified attachment
+func (d *Database)DeleteAttachment(doc map[string]interface{}, fileName string) bool {
+  // defensive check
+  if doc == nil || len(fileName) == 0 {
+    return false
+  }
+
+  if _, ok := doc["_id"]; !ok {
+    return false
+  }
+
+  if _, ok := doc["_rev"]; !ok {
+    return false
+  }
+
+  id, rev := doc["_id"].(string), doc["_rev"].(string)
+
+  if len(id) == 0 || len(rev) == 0 {
+    return false
+  }
+
+  params := url.Values{}
+  params.Set("rev", rev)
+  docRes := docResource(docResource(d.resource, id), fileName)
+  status, _, data := docRes.DeleteJSON("", nil, params)
+  if status == OK {
+    var jsonMap map[string]interface{}
+    json.Unmarshal(*data, &jsonMap)
+    doc["_rev"] = jsonMap["rev"]
+  }
+  return status == OK
+}

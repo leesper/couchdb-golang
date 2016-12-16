@@ -2,6 +2,9 @@ package couchdb
 
 import (
   // "fmt"
+  "mime"
+  "os"
+  "path/filepath"
   "reflect"
   "strings"
   "testing"
@@ -237,4 +240,48 @@ func TestDatabaseCommit(t *testing.T) {
   s.Delete("golang-tests")
 }
 
-func TestGetPutDeleteAttachment(t *testing.T) {}
+func TestPutGetDeleteAttachment(t *testing.T) {
+  content := "hello couch"
+  db, _ := s.Create("golang-tests")
+  tmpFileName := filepath.Join(os.TempDir(), "test.txt")
+  tmpFile, err := os.Create(tmpFileName)
+  if err != nil {
+    t.Error(`create file error`, err)
+  }
+  _, err = tmpFile.Write([]byte(content))
+  if err != nil {
+    t.Error(`write file error`, err)
+  }
+  tmpFile.Close()
+
+  tmpFile, err = os.Open(tmpFileName)
+  if err != nil {
+    t.Error(`open file error`, err)
+  }
+  defer tmpFile.Close()
+
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "Jason Statham",
+  }
+  db.Set(GenerateUUID(), doc)
+  mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
+  if !db.PutAttachment(doc, tmpFile, mime.TypeByExtension(filepath.Ext(tmpFileName))) {
+    t.Error(`put attachment should return true`)
+  }
+
+  data, ok := db.GetAttachment(doc["_id"].(string), "test.txt")
+  if !ok {
+    t.Error(`get attachment should return true`)
+  }
+
+  if string(data) != content {
+    t.Error(`read data should be `, content)
+  }
+
+  if !db.DeleteAttachment(doc, tmpFileName) {
+    t.Error(`delete attachment file failed`)
+  }
+
+  s.Delete("golang-tests")
+}

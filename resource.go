@@ -213,7 +213,7 @@ func request(method string, u *url.URL, header *http.Header, body io.Reader, par
 
   // Accept and Content-type are highly recommended for CouchDB
   setDefault(&req.Header, "Accept", "application/json")
-  setDefault(&req.Header, "Content-type", "application/json")
+  setDefault(&req.Header, "Content-Type", "application/json")
   updateHeader(&req.Header, header)
 
   rsp, err := http.DefaultClient.Do(req)
