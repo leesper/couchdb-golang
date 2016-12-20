@@ -3,6 +3,7 @@ package couchdb
 import (
   // "fmt"
   "mime"
+  "net/url"
   "os"
   "path/filepath"
   "reflect"
@@ -356,4 +357,63 @@ func TestGetSetRevsLimit(t *testing.T) {
     t.Error(`limit should be 10`)
   }
   s.Delete("golang-tests")
+}
+
+func TestChanges(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  options := url.Values{
+    "style": []string{"all_docs"},
+  }
+  changes, ok := db.Changes(options)
+  if !ok {
+    t.Error(`changes should return true`)
+  }
+  if changes == nil {
+    t.Error(`changes should be non-nil`)
+  }
+  s.Delete("golang-tests")
+}
+
+func TestCleanup(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  ok := db.Cleanup()
+  if !ok {
+    t.Error(`cleanup should return true`)
+  }
+  s.Delete("golang-tests")
+}
+
+func TestCompact(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  ok := db.Compact()
+  if !ok {
+    t.Error(`compact should return true`)
+  }
+  s.Delete("golang-tests")
+}
+
+func TestCopy(t *testing.T) {
+  db, _ := s.Create("golang-tests")
+  doc := map[string]interface{}{
+    "type": "Person",
+    "name": "Jason Statham",
+  }
+  src, _ := db.Save(doc)
+  dst := GenerateUUID()
+  _, ok := db.Copy(src, dst)
+  if !ok {
+    t.Error(`compact should return true`)
+  }
+  dstDoc := db.Get(dst)
+  if dstDoc == nil {
+    t.Error(`dstDoc should be non-nil`)
+  }
+  s.Delete("golang-tests")
+}
+
+func TestPurge(t *testing.T) {
+  // db, _ := s.Create("golang-tests")
+
+  //TODO
+  // s.Delete("golang-tests")
 }

@@ -7,7 +7,9 @@ package couchdb
 
 import (
   "bytes"
+  "crypto/tls"
   "encoding/json"
+  // "fmt"
   "io"
   "io/ioutil"
   "net/http"
@@ -38,6 +40,14 @@ const (
   InternalServerError = 500
 )
 
+var (
+  httpClient *http.Client
+)
+
+func init() {
+  httpClient = http.DefaultClient
+}
+
 // Resource handles all requests to CouchDB
 type Resource struct {
   header *http.Header
@@ -49,6 +59,15 @@ func NewResource(urlStr string, header *http.Header) *Resource {
   u, err := url.Parse(urlStr)
   if err != nil {
     return nil
+  }
+
+  if strings.HasPrefix(urlStr, "https") {
+    tr := &http.Transport{
+      TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+    }
+    httpClient = &http.Client{
+      Transport: tr,
+    }
   }
 
   h := new(http.Header)
@@ -216,9 +235,9 @@ func request(method string, u *url.URL, header *http.Header, body io.Reader, par
   setDefault(&req.Header, "Content-Type", "application/json")
   updateHeader(&req.Header, header)
 
-  rsp, err := http.DefaultClient.Do(req)
+  rsp, err := httpClient.Do(req)
   if err != nil {
-    return UnknownError, rsp.Header, nil
+    return UnknownError, http.Header{}, nil
   }
   defer rsp.Body.Close()
   data, err := ioutil.ReadAll(rsp.Body)

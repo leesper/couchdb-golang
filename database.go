@@ -401,3 +401,49 @@ func (d *Database)SetRevsLimit(limit int) bool {
   status, _, _ := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
   return status == OK
 }
+
+// Changes returns a sorted list of changes feed made to documents in the database.
+func (d *Database)Changes(options url.Values) (map[string]interface{}, bool) {
+  status, _, data := d.resource.GetJSON("_changes", nil, options)
+  if status != OK {
+    return nil, false
+  }
+  var changes map[string]interface{}
+  json.Unmarshal(*data, &changes)
+  return changes, status == OK
+}
+
+// Cleanup removes all view index files no longer required by CouchDB.
+func (d *Database)Cleanup() bool {
+  status, _, _ := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
+  return status == Accepted
+}
+
+// Compact compacts the database by compressing the disk database file.
+func (d *Database)Compact() bool {
+  status, _, _ := d.resource.PostJSON("_compact", nil, nil, nil)
+  return status == Accepted
+}
+
+// Copy copies an existing document to a new or existing document.
+func (d *Database)Copy(srcID, destID string) (string, bool) {
+  docRes := docResource(d.resource, srcID)
+  header := &http.Header{
+    "Destination": []string{destID},
+  }
+  status, _, data := request("COPY", docRes.base, header, nil, nil)
+  var rev string
+  if status == Created {
+    var jsonMap map[string]interface{}
+    json.Unmarshal(data, &jsonMap)
+    rev = jsonMap["rev"].(string)
+  }
+
+  return rev, status == Created
+}
+
+// Purge performs complete removing of the given documents.
+func (d *Database)Purge(docIDs []string) bool {
+  // TODO
+  return false
+}
