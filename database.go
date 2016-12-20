@@ -461,3 +461,7 @@ func (d *Database)GetSecurity() (map[string]interface{}, bool) {
   }
   return secDoc, status == OK
 }
+
+// GetRevisions returns all available revisions of the given document in reverse
+// order, e.g. latest first.TODO
+func (d *Database)GetRevisions() {}
