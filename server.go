@@ -16,15 +16,15 @@ type Server struct {
 }
 
 // NewServer creates an object on behalf of CouchDB instance in address urlStr.
-func NewServer(urlStr string) *Server {
-  res := NewResource(urlStr, nil)
-  if res == nil {
-    return nil
+func NewServer(urlStr string) (*Server, error) {
+  res, err := NewResource(urlStr, nil)
+  if err != nil {
+    return nil, err
   }
 
   return &Server{
     resource: res,
-  }
+  }, nil
 }
 
 // NewServerFullCommit creates a CouchDB instance in address urlStr.
