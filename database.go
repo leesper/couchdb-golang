@@ -447,3 +447,17 @@ func (d *Database)Purge(docIDs []string) bool {
   // TODO
   return false
 }
+
+func (d *Database)SetSecurity(securityDoc map[string]interface{}) bool {
+  status, _, _ := d.resource.PutJSON("_security", nil, securityDoc, nil)
+  return status == OK
+}
+
+func (d *Database)GetSecurity() (map[string]interface{}, bool) {
+  status, _, data := d.resource.GetJSON("_security", nil, nil)
+  var secDoc map[string]interface{}
+  if status == OK {
+    json.Unmarshal(*data, &secDoc)
+  }
+  return secDoc, status == OK
+}
