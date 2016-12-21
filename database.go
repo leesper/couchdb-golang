@@ -53,9 +53,9 @@ func NewDatabase(urlStr string) *Database {
   } else {
     dbUrlStr = urlStr
   }
-  res := NewResource(dbUrlStr, nil)
+  res, err := NewResource(dbUrlStr, nil)
 
-  if res == nil {
+  if err != nil {
     return nil
   }
 
@@ -82,7 +82,7 @@ func (d *Database)Name() string {
 }
 
 func (d *Database)databaseInfo() map[string]interface{} {
-  _, _, jsonData := d.resource.GetJSON("", nil, url.Values{})
+  _, jsonData, _ := d.resource.GetJSON("", nil, url.Values{})
 
   var jsonMap map[string]interface{}
 
@@ -97,22 +97,22 @@ func (d *Database)databaseInfo() map[string]interface{} {
 
 // Aavailable returns true if the database is good to go.
 func (d *Database)Available() bool {
-  status, _, _ := d.resource.Head("", nil, nil)
-  return status == OK
+  _, _, err := d.resource.Head("", nil, nil)
+  return err == nil
 }
 
 // Contains returns true if the database contains a document with the specified ID.
 func (d *Database)Contains(docid string) bool {
   docRes := docResource(d.resource, docid)
-  status, _, _ := docRes.Head("", nil, nil)
-  return status == OK
+  _, _, err := docRes.Head("", nil, nil)
+  return err == nil
 }
 
 // Get returns the document with the specified ID.
 func (d *Database)Get(docid string) map[string]interface{} {
   docRes := docResource(d.resource, docid)
-  status, _, data := docRes.GetJSON("", nil, nil)
-  if status != OK {
+  _, data, err := docRes.GetJSON("", nil, nil)
+  if err != nil {
     return nil
   }
   var doc map[string]interface{}
@@ -123,15 +123,15 @@ func (d *Database)Get(docid string) map[string]interface{} {
 // Delete deletes the document with the specified ID.
 func (d *Database)Delete(docid string) bool {
   docRes := docResource(d.resource, docid)
-  status, header, _ := docRes.Head("", nil, nil)
-  if status != OK {
+  header, _, err := docRes.Head("", nil, nil)
+  if err != nil {
     return false
   }
   rev := strings.Trim(header.Get("ETag"), `"`)
   params := url.Values{}
   params.Set("rev", rev)
-  status, _, _ = docRes.DeleteJSON("", nil, params)
-  return status == OK
+  _, _, err = docRes.DeleteJSON("", nil, params)
+  return err == nil
 }
 
 // Set creates or updates a document with the specified ID.
@@ -141,8 +141,8 @@ func (d *Database)Set(docid string, doc map[string]interface{}) bool {
   }
 
   docRes := docResource(d.resource, docid)
-  status, _, data := docRes.PutJSON("", nil, doc, nil)
-  if status != Created {
+  _, data, err := docRes.PutJSON("", nil, doc, nil)
+  if err != nil {
     return false
   }
 
@@ -156,8 +156,8 @@ func (d *Database)Set(docid string, doc map[string]interface{}) bool {
 // DocIDs returns the IDs of all documents in database.
 func (d *Database)DocIDs() []string {
   docRes := docResource(d.resource, "_all_docs")
-  status, _, data := docRes.GetJSON("", nil, nil)
-  if status != OK {
+  _, data, err := docRes.GetJSON("", nil, nil)
+  if err != nil {
     return nil
   }
   var jsonMap map[string]*json.RawMessage
@@ -204,14 +204,14 @@ func (d *Database)Save(doc map[string]interface{}) (string, string) {
     return id, rev
   }
 
-  var httpFunc func(string, *http.Header, map[string]interface{}, url.Values) (int, http.Header, *json.RawMessage)
+  var httpFunc func(string, http.Header, map[string]interface{}, url.Values) (http.Header, *json.RawMessage, error)
   if v, ok := doc["_id"]; ok {
     httpFunc = docResource(d.resource, v.(string)).PutJSON
   } else {
     httpFunc = d.resource.PostJSON
   }
 
-  _, _, data := httpFunc("", nil, doc, nil)
+  _, data, _ := httpFunc("", nil, doc, nil)
   var jsonMap map[string]interface{}
   json.Unmarshal(*data, &jsonMap)
 
@@ -230,15 +230,17 @@ func (d *Database)Save(doc map[string]interface{}) (string, string) {
 
 // docResource returns a Resource instance for docID
 func docResource(res *Resource, docID string) *Resource {
+  var docRes *Resource
   if docID[:1] == "_" {
     paths := strings.SplitN(docID, "/", 2)
     for _, p := range paths {
-      res = res.NewResourceWithURL(p)
+      docRes, _ = res.NewResourceWithURL(p)
     }
-    return res
+    return docRes
   }
 
-  return res.NewResourceWithURL(docID)
+  docRes, _ = res.NewResourceWithURL(docID)
+  return docRes
 }
 
 // GenerateUUID returns a random 128-bit UUID
@@ -258,8 +260,8 @@ func GenerateUUID() string {
 // "X-Couch-Full-Commit: false" header to disable immediate commits, this method
 // can be used to ensure that non-commited changes are commited to physical storage.
 func (d *Database)Commit() bool {
-  status, _, _ := d.resource.PostJSON("_ensure_full_commit", nil, nil, nil)
-  return status == Created
+  _, _, err := d.resource.PostJSON("_ensure_full_commit", nil, nil, nil)
+  return err == nil
 }
 
 // GetAttachment returns the file attachment associated with the document.
@@ -271,8 +273,8 @@ func (d *Database)GetAttachment(docid, fileName string) ([]byte, bool) {
   }
 
   docRes := docResource(docResource(d.resource, docid), fileName)
-  status, _, data := docRes.Get("", nil, nil)
-  return data, status == OK
+  _, data, err := docRes.Get("", nil, nil)
+  return data, err == nil
 }
 
 // PutAttachment uploads the supplied *os.File as an attachment to the specified document.
@@ -312,14 +314,14 @@ func (d *Database)PutAttachment(doc map[string]interface{}, file *os.File, mimeT
   params := url.Values{}
   params.Set("rev", rev)
 
-  status, _, data := docRes.Put("", &header, contents, params)
-  if status == Created {
+  _, data, err := docRes.Put("", header, contents, params)
+  if err == nil {
     var jsonMap map[string]interface{}
     json.Unmarshal(data, &jsonMap)
     doc["_rev"] = jsonMap["rev"].(string)
   }
 
-  return status == Created
+  return err == nil
 }
 
 // DeleteAttachment deletes the specified attachment
@@ -346,13 +348,13 @@ func (d *Database)DeleteAttachment(doc map[string]interface{}, fileName string) 
   params := url.Values{}
   params.Set("rev", rev)
   docRes := docResource(docResource(d.resource, id), fileName)
-  status, _, data := docRes.DeleteJSON("", nil, params)
-  if status == OK {
+  _, data, err := docRes.DeleteJSON("", nil, params)
+  if err == nil {
     var jsonMap map[string]interface{}
     json.Unmarshal(*data, &jsonMap)
     doc["_rev"] = jsonMap["rev"]
   }
-  return status == OK
+  return err == nil
 }
 
 type IDRev struct {
@@ -376,8 +378,8 @@ func (d *Database)UpdateDocuments(docs []map[string]interface{}, options map[str
   }
   body["docs"] = docs
 
-  status, _, data := d.resource.PostJSON("_bulk_docs", nil, body, nil)
-  if status == Created {
+  _, data, err := d.resource.PostJSON("_bulk_docs", nil, body, nil)
+  if err == nil {
     var jsonArr []map[string]interface{}
     json.Unmarshal(*data, &jsonArr)
     for _, ele := range jsonArr {
@@ -385,61 +387,68 @@ func (d *Database)UpdateDocuments(docs []map[string]interface{}, options map[str
       results = append(results, IDRev{Id: id, Rev: rev})
     }
   }
-  return results, status == Created
+  return results, err == nil
 }
 
 // GetRevsLimit gets the current revs_limit(revision limit) setting.
-func (d *Database)GetRevsLimit() (int, bool) {
-  status, _, data := d.resource.Get("_revs_limit", nil, nil)
-  limit, err := strconv.Atoi(strings.Trim(string(data), "\n"))
-  return limit, status == OK && err == nil
+func (d *Database)GetRevsLimit() (int, error) {
+  limit := -1
+  _, data, err := d.resource.Get("_revs_limit", nil, nil)
+  if err != nil {
+    return limit, err
+  }
+  limit, err = strconv.Atoi(strings.Trim(string(data), "\n"))
+  if err != nil {
+    return limit, err
+  }
+  return limit, nil
 }
 
 // SetRevsLimit sets the maximum number of document revisions that will be
 // tracked by CouchDB.
 func (d *Database)SetRevsLimit(limit int) bool {
-  status, _, _ := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
-  return status == OK
+  _, _, err := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
+  return err == nil
 }
 
 // Changes returns a sorted list of changes feed made to documents in the database.
 func (d *Database)Changes(options url.Values) (map[string]interface{}, bool) {
-  status, _, data := d.resource.GetJSON("_changes", nil, options)
-  if status != OK {
+  _, data, err := d.resource.GetJSON("_changes", nil, options)
+  if err != nil {
     return nil, false
   }
   var changes map[string]interface{}
   json.Unmarshal(*data, &changes)
-  return changes, status == OK
+  return changes, err == nil
 }
 
 // Cleanup removes all view index files no longer required by CouchDB.
 func (d *Database)Cleanup() bool {
-  status, _, _ := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
-  return status == Accepted
+  _, _, err := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
+  return err == nil
 }
 
 // Compact compacts the database by compressing the disk database file.
 func (d *Database)Compact() bool {
-  status, _, _ := d.resource.PostJSON("_compact", nil, nil, nil)
-  return status == Accepted
+  _, _, err := d.resource.PostJSON("_compact", nil, nil, nil)
+  return err == nil
 }
 
 // Copy copies an existing document to a new or existing document.
 func (d *Database)Copy(srcID, destID string) (string, bool) {
   docRes := docResource(d.resource, srcID)
-  header := &http.Header{
+  header := http.Header{
     "Destination": []string{destID},
   }
-  status, _, data := request("COPY", docRes.base, header, nil, nil)
+  _, data, err := request("COPY", docRes.base, header, nil, nil)
   var rev string
-  if status == Created {
+  if err == nil {
     var jsonMap map[string]interface{}
     json.Unmarshal(data, &jsonMap)
     rev = jsonMap["rev"].(string)
   }
 
-  return rev, status == Created
+  return rev, err == nil
 }
 
 // Purge performs complete removing of the given documents.
@@ -449,17 +458,17 @@ func (d *Database)Purge(docIDs []string) bool {
 }
 
 func (d *Database)SetSecurity(securityDoc map[string]interface{}) bool {
-  status, _, _ := d.resource.PutJSON("_security", nil, securityDoc, nil)
-  return status == OK
+  _, _, err := d.resource.PutJSON("_security", nil, securityDoc, nil)
+  return err == nil
 }
 
 func (d *Database)GetSecurity() (map[string]interface{}, bool) {
-  status, _, data := d.resource.GetJSON("_security", nil, nil)
+  _, data, err := d.resource.GetJSON("_security", nil, nil)
   var secDoc map[string]interface{}
-  if status == OK {
+  if err == nil {
     json.Unmarshal(*data, &secDoc)
   }
-  return secDoc, status == OK
+  return secDoc, err == nil
 }
 
 // GetRevisions returns all available revisions of the given document in reverse

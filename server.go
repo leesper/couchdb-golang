@@ -15,41 +15,42 @@ type Server struct {
   resource *Resource
 }
 
-// NewServer creates an object on behalf of CouchDB instance in address urlStr.
+// NewServer creates a CouchDB server instance in address urlStr.
 func NewServer(urlStr string) (*Server, error) {
+ return newServer(urlStr, true)
+}
+
+// NewServerNoFullCommit creates a CouchDB server instance in address urlStr
+// with X-Couch-Full-Commit disabled.
+func NewServerNoFullCommit(urlStr string) (*Server, error) {
+  return newServer(urlStr, false)
+}
+
+func newServer(urlStr string, fullCommit bool) (*Server, error) {
   res, err := NewResource(urlStr, nil)
   if err != nil {
     return nil, err
   }
 
-  return &Server{
+  s := &Server{
     resource: res,
-  }, nil
-}
-
-// NewServerFullCommit creates a CouchDB instance in address urlStr.
-// Disable X-Couch-Full-Commit by setting fullCommit to false.
-func NewServerFullCommit(urlStr string, fullCommit bool) *Server {
-  s := NewServer(urlStr)
-  if s == nil {
-    return nil
   }
 
   if !fullCommit {
     s.resource.header.Set("X-Couch-Full-Commit", "false")
   }
-  return s
+  return s, nil
 }
 
 // Version returns the version info about CouchDB instance.
 func (s *Server)Version() string {
   var jsonMap map[string]interface{}
 
-  _, _, jsonData := s.resource.GetJSON("", nil, nil)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.GetJSON("", nil, nil)
+  if err != nil {
     return ""
   }
-  _ = json.Unmarshal(*jsonData, &jsonMap)
+  json.Unmarshal(*jsonData, &jsonMap)
 
   return jsonMap["version"].(string)
 }
@@ -58,11 +59,11 @@ func (s *Server)Version() string {
 func (s *Server)ActiveTasks() []interface{} {
   var jsonArr []interface{}
 
-  _, _, jsonData := s.resource.GetJSON("_active_tasks", nil, nil)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.GetJSON("_active_tasks", nil, nil)
+  if err != nil {
     return nil
   }
-  _ = json.Unmarshal(*jsonData, &jsonArr)
+  json.Unmarshal(*jsonData, &jsonArr)
 
   return jsonArr
 }
@@ -71,11 +72,11 @@ func (s *Server)ActiveTasks() []interface{} {
 func (s *Server)DBs() []string {
   var dbs []string
 
-  _, _, jsonData := s.resource.GetJSON("_all_dbs", nil, nil)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.GetJSON("_all_dbs", nil, nil)
+  if err != nil {
     return nil
   }
-  _ = json.Unmarshal(*jsonData, &dbs)
+  json.Unmarshal(*jsonData, &dbs)
   return dbs
 }
 
@@ -86,12 +87,12 @@ func (s *Server)DBs() []string {
 func (s *Server)Membership() ([]string, []string) {
   var jsonMap map[string]*json.RawMessage
 
-  _, _, jsonData := s.resource.GetJSON("_membership", nil, nil)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.GetJSON("_membership", nil, nil)
+  if err != nil {
     return nil, nil
   }
 
-  _ = json.Unmarshal(*jsonData, &jsonMap)
+  json.Unmarshal(*jsonData, &jsonMap)
   if _, ok := jsonMap["error"]; ok {
     return nil, nil
   }
@@ -120,11 +121,11 @@ func (s *Server)Replicate(source, target string, options map[string]interface{})
     }
   }
 
-  _, _, jsonData := s.resource.PostJSON("_replicate", nil, body, nil)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.PostJSON("_replicate", nil, body, nil)
+  if err != nil {
     return nil
   }
-  _ = json.Unmarshal(*jsonData, &jsonMap)
+  json.Unmarshal(*jsonData, &jsonMap)
 
   return jsonMap
 }
@@ -153,13 +154,13 @@ func (s *Server)UUIDs(count int) []string {
   values := url.Values{}
   values.Set("count", strconv.Itoa(count))
 
-  _, _, jsonData := s.resource.GetJSON("_uuids", nil, values)
-  if jsonData == nil {
+  _, jsonData, err := s.resource.GetJSON("_uuids", nil, values)
+  if err != nil {
     return nil
   }
 
   var jsonMap map[string]*json.RawMessage
-  _ = json.Unmarshal(*jsonData, &jsonMap)
+  json.Unmarshal(*jsonData, &jsonMap)
   if _, ok := jsonMap["uuids"]; !ok {
     return nil
   }
@@ -173,32 +174,29 @@ func (s *Server)UUIDs(count int) []string {
 // Create returns a database instance with the given name, returns true if created,
 // if database already existed, returns false, *Database will be nil if failed.
 func (s *Server)Create(name string) (*Database, bool) {
-  status, _, _ := s.resource.PutJSON(name, nil, nil, nil)
+  _, _, err := s.resource.PutJSON(name, nil, nil, nil)
 
   // PreconditionFailed means database with the given name already existed
-  if status != Created && status != PreconditionFailed {
+  if err != nil && err != ErrPreconditionFailed {
     return nil, false
   }
 
   db := s.GetDatabase(name)
 
-  return db, db != nil && status == Created
+  return db, db != nil && err == nil
 }
 
 // Delete deletes a database with the given name. Return false if failed.
 func (s *Server)Delete(db string) bool {
-  status, _, _ := s.resource.DeleteJSON(db, nil, nil)
+  _, _, err := s.resource.DeleteJSON(db, nil, nil)
 
-  if status == OK {
-    return true
-  }
-  return false
+  return err == nil
 }
 
 // GetDatabase gets a database instance with the given name. Return nil if failed.
 func (s *Server)GetDatabase(name string) *Database {
-  res := s.resource.NewResourceWithURL(name)
-  if res == nil {
+  res, err := s.resource.NewResourceWithURL(name)
+  if err != nil {
     return nil
   }
 
@@ -207,8 +205,8 @@ func (s *Server)GetDatabase(name string) *Database {
     return nil
   }
 
-  status, _, _ := db.resource.Head("", nil, nil)
-  if status != OK {
+  _, _, err = db.resource.Head("", nil, nil)
+  if err != nil {
     return nil
   }
   return db
@@ -252,30 +250,30 @@ func (s *Server)Login(name, password string) (string, bool) {
     "name": name,
     "password": password,
   }
-  status, header, _ := s.resource.PostJSON("_session", nil, body, nil)
-  if status != OK {
+  header, _, err := s.resource.PostJSON("_session", nil, body, nil)
+  if err != nil {
     return "", false
   }
 
   tokenPart := strings.Split(header.Get("Set-Cookie"), ";")[0]
   token := strings.Split(tokenPart, "=")[1]
-  return token, status == OK
+  return token, err == nil
 }
 
 // Verify regular user token
 func (s *Server)VerifyToken(token string) bool {
   header := http.Header{}
   header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
-  status, _, _ := s.resource.GetJSON("_session", &header, nil)
-  return status == OK
+  _, _, err := s.resource.GetJSON("_session", header, nil)
+  return err == nil
 }
 
 // Logout regular user in CouchDB
 func (s *Server)Logout(token string) bool {
   header := http.Header{}
   header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
-  status, _, _ := s.resource.DeleteJSON("_session", &header, nil)
-  return status == OK
+  _, _, err := s.resource.DeleteJSON("_session", header, nil)
+  return err == nil
 }
 
 // RemoveUser removes regular user in authentication database.

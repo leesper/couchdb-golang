@@ -1,4 +1,4 @@
-// package couchdb
+package couchdb
 //
 // import (
 //   // "fmt"
@@ -11,11 +11,48 @@
 //   "testing"
 // )
 //
-// var s *Server
+// func TestSaveNew() {}
+// func TestSaveNewWithID() {}
+// func TestSaveExisting() {}
+// func TestSaveNewBatch() {}
+// func TestSaveExistingBatch() {}
+// func TestDatabaseExists() {}
+// func TestDatabaseName() {}
+// func TestCommit() {}
+// func TestCreateLargeDoc() {}
+// func TestDocIDQuoting() {}
+// func TestDisallowNaN() {}
+// func TestDisallowNilID() {}
+// func TestDocRevs() {}
+// func TestAttachmentCRUD() {}
+// func TestAttachmentCRUDWithFiles() {}
+// func TestAttachmentFromFS() {}
+// func TestEmptyAttachment() {}
+// func TestDefaultAttachment() {}
+// func TestAttachmentNoFilename() {}
+// func TestJSONAttachment() {}
+// func TestIncludeDocs() {}
+// // TODO adding new apis about mango query engine
+// func TestQueryMultiGet() {}
+// func TestBulkUpdateConflict() {}
+// func TestBulkUpdateAllOrNothing() {}
+// func TestBulkUpdateBadDoc() {}
+// func TestCopyDocConflict() {}
+// func TestCopyDocOverwrite() {}
+// func TestCopyDocSrcObj() {}
+// func TestCopyDocDestObjNoRev() {}
+// func TestCopyDocSrcDictLike() {}
+// func TestCopyDocDestDictLike() {}
+// func TestCopyDocSrcBadDoc() {}
+// func TestCopyDocDestBadDoc() {}
+// func TestChanges() {}
+// func TestChangesConnUsable() {}
+// func TestChangesHeartbeat() {}
+// func TestPurge() {}
+// func TestSecurity() {}
 //
-// func init() {
-//   s = NewServer("http://root:likejun@localhost:5984")
-// }
+//
+//
 //
 // func TestDatabaseName(t *testing.T) {
 //   s.Create("golang-tests")

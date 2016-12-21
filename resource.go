@@ -62,7 +62,7 @@ func NewResource(urlStr string, header http.Header) (*Resource, error) {
     }
   }
 
-  var h http.Header
+  h := http.Header{}
   if header != nil {
     h = header
   }
@@ -188,21 +188,21 @@ func (r *Resource)PutJSON(path string, header http.Header, body map[string]inter
 
 // helper function to make real request
 func requestJSON(method string, u *url.URL, header http.Header, body io.Reader, params url.Values) (http.Header, *json.RawMessage, error) {
-  err, header, data := request(method, u, header, body, params)
+  hdr, data, err := request(method, u, header, body, params)
   if err != nil {
     return nil, nil, err
   }
 
   var jsonData json.RawMessage
-  err := json.Unmarshal(data, &jsonData)
+  err = json.Unmarshal(data, &jsonData)
   if err != nil {
     return nil, nil, err
   }
-  return header, &jsonData, err
+  return hdr, &jsonData, err
 }
 
 // helper function to make real request
-func request(method string, u *url.URL, header *http.Header, body io.Reader, params url.Values) (http.Header, []byte, error) {
+func request(method string, u *url.URL, header http.Header, body io.Reader, params url.Values) (http.Header, []byte, error) {
   method = strings.ToUpper(method)
 
   u.RawQuery = params.Encode()
@@ -223,7 +223,7 @@ func request(method string, u *url.URL, header *http.Header, body io.Reader, par
   // Accept and Content-type are highly recommended for CouchDB
   setDefault(&req.Header, "Accept", "application/json")
   setDefault(&req.Header, "Content-Type", "application/json")
-  updateHeader(&req.Header, header)
+  updateHeader(&req.Header, &header)
 
   rsp, err := httpClient.Do(req)
   if err != nil {
