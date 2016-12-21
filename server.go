@@ -72,60 +72,60 @@ func (s *Server)Version() (string, error) {
   return jsonMap["version"].(string), nil
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+func (s *Server)String() string {
+  return fmt.Sprintf("Server %s", s.resource.base)
+}
 
 // ActiveTasks lists of running tasks.
-func (s *Server)ActiveTasks() []interface{} {
-  var jsonArr []interface{}
-
-  _, jsonData, err := s.resource.GetJSON("_active_tasks", nil, nil)
+func (s *Server)ActiveTasks() ([]interface{}, error) {
+  var tasks []interface{}
+  _, data, err := s.resource.GetJSON("_active_tasks", nil, nil)
   if err != nil {
-    return nil
+    return nil, err
   }
-  json.Unmarshal(*jsonData, &jsonArr)
-
-  return jsonArr
+  err = json.Unmarshal(*data, &tasks)
+  if err != nil {
+    return nil, err
+  }
+  return tasks, nil
 }
 
 // DBs returns a list of all the databases in the CouchDB instance.
-func (s *Server)DBs() []string {
+func (s *Server)DBs() ([]string, error) {
   var dbs []string
-
-  _, jsonData, err := s.resource.GetJSON("_all_dbs", nil, nil)
+  _, data, err := s.resource.GetJSON("_all_dbs", nil, nil)
   if err != nil {
-    return nil
+    return nil, err
   }
-  json.Unmarshal(*jsonData, &dbs)
-  return dbs
+  err = json.Unmarshal(*data, &dbs)
+  if err != nil {
+    return nil, err
+  }
+  return dbs, nil
 }
+
+// Stats returns a JSON object containing the statistics for the running server.
+func (s *Server)Stats(node, entry string) (map[string]interface{}, error) {
+  var stats map[string]interface{}
+  _, data, err := s.resource.GetJSON(fmt.Sprintf("_node/%s/_stats/%s", node, entry), nil, url.Values{})
+  if err != nil {
+    return nil, err
+  }
+  err = json.Unmarshal(*data, &stats)
+  if err != nil {
+    return nil, err
+  }
+  return stats, nil
+}
+
+func (s *Server)Len() (int, error) {
+  dbs, err := s.DBs()
+  if err != nil {
+    return -1, err
+  }
+  return len(dbs), nil
+}
+//////////////////////////////////////////////////////////////////////////////
 
 
 // Membership displays the nodes that are part of the cluster as clusterNodes.
@@ -177,18 +177,6 @@ func (s *Server)Replicate(source, target string, options map[string]interface{})
   return jsonMap
 }
 
-// Stats returns a JSON object containing the statistics for the running server.
-// func (s *Server)Stats(entry string) map[string]interface{} {
-//   var jsonMap map[string]interface{}
-//   _, _, jsonData := s.resource.GetJSON("_stats", nil, url.Values{})
-//   if jsonData != nil {
-//     return nil
-//   }
-//
-//   _ = json.Unmarshal(*jsonData, &jsonMap)
-//   log.Println(jsonMap, len(jsonMap))
-//   return jsonMap
-// }
 
 // UUIDs requests one or more Universally Unique Identifiers from the CouchDB instance.
 // The response is a JSON object providing a list of UUIDs.

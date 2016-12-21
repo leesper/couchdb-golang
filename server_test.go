@@ -57,46 +57,93 @@ func TestServerConfig(t *testing.T) {
   }
 }
 
-// func TestServerString(t *testing.T) {
-//   server, err := NewServer(DEFAULT_BASE_URL)
-//   if err != nil {
-//     t.Error(`new server error`, err)
-//   }
-//   fmt.Println(server)
-// }
-//
-// func TestServerVars(t *testing.T) {
-//   version := s.Version()
-//   if reflect.ValueOf(version).Kind() != reflect.String {
-//     t.Error(`version not of string type`)
-//   }
-//
-//   config := s.Config()
-//   if reflect.ValueOf(config).Kind() != reflect.Map {
-//     t.Error(`config not of map type`)
-//   }
-//
-//   tasks := s.ActiveTasks()
-//   if reflect.ValueOf(tasks).Kind() != reflect.Slice {
-//     t.Error(`tasks not of slice type`)
-//   }
-// }
-//
-// func TestServerStats(t *testing.T) {
-//   stats := s.Stats()
-//   if reflect.ValueOf(stats).Kind() != reflect.Map {
-//     t.Error(`stats not of map type`)
-//   }
-//   stats = s.Stats("httpd/requests")
-//   if reflect.ValueOf(stats).Kind() != reflect.Map {
-//     t.Error(`httpd/requests stats not of map type`)
-//   }
-//   ok := len(stats) == 1 && len(stats["httpd"]) == 1
-//   if !ok {
-//     t.Errorf("len(stats) = %d want 1, len(stats[httpd]) = %d, want 1", len(stats), len(stats["httpd"]))
-//   }
-// }
-//
+func TestServerString(t *testing.T) {
+  server, err := NewServer(DEFAULT_BASE_URL)
+  if err != nil {
+    t.Error(`new server error`, err)
+  }
+  if server.String() != "Server http://localhost:5984" {
+    t.Error(`server name invalid want "Server http://localhost:5984"`)
+  }
+}
+
+func TestServerVars(t *testing.T) {
+  version, err := s.Version()
+  if err != nil {
+    t.Error(`server version error`, err)
+  }
+  if reflect.ValueOf(version).Kind() != reflect.String {
+    t.Error(`version not of string type`)
+  }
+
+  tasks, err := s.ActiveTasks()
+  if reflect.ValueOf(tasks).Kind() != reflect.Slice {
+    t.Error(`tasks not of slice type`)
+  }
+}
+
+func TestServerStats(t *testing.T) {
+  stats, err := s.Stats("couchdb@localhost", "")
+  if err != nil {
+    t.Error(`server stats error`, err)
+  }
+  if reflect.ValueOf(stats).Kind() != reflect.Map {
+    t.Error(`stats not of map type`)
+  }
+  stats, err = s.Stats("couchdb@localhost", "couchdb")
+  if err != nil {
+    t.Error(`server stats httpd/requests error`, err)
+  }
+  if reflect.ValueOf(stats).Kind() != reflect.Map {
+    t.Error(`httpd/requests stats not of map type`)
+  }
+}
+
+func TestDBs(t *testing.T) {
+  aName, bName := "dba", "dbb"
+  s.Create(aName)
+  defer s.Delete(aName)
+
+  s.Create(bName)
+  defer s.Delete(bName)
+
+  dbs, err := s.DBs()
+  if err != nil {
+    t.Error(`server DBs error`, err)
+  }
+  var aExist, bExist bool
+  for _, v := range dbs {
+    if v == aName {
+      aExist = true
+    } else if v == bName {
+      bExist = true
+    }
+  }
+
+  if !aExist {
+    t.Errorf("db %s not existed in dbs", aName)
+  }
+
+  if !bExist {
+    t.Errorf("db %s not existed in dbs", bName)
+  }
+}
+
+func TestLen(t *testing.T) {
+  aName, bName := "dba", "dbb"
+  s.Create(aName)
+  defer s.Delete(aName)
+  s.Create(bName)
+  defer s.Delete(bName)
+
+  len, err := s.Len()
+  if err != nil {
+    t.Error(`server len error`, err)
+  }
+  if len < 2 {
+    t.Error("server len should be >= 2")
+  }
+}
 // func TestGetDBMissing(t *testing.T) {
 //   _, err := s.Get("golang-tests")
 //   if err != ErrNotFound {
@@ -221,47 +268,8 @@ func TestServerConfig(t *testing.T) {
 //     t.Error(`result should be ok`)
 //   }
 // }
-//
-// func TestDBs(t *testing.T) {
-//   aName, bName := "dba", "dbb"
-//   s.Create(aName)
-//   defer s.Delete(aName)
-//
-//   s.Create(bName)
-//   defer s.Delete(bName)
-//
-//   dbs := s.DBs()
-//   var aExist, bExist bool
-//   for _, v := range dbs {
-//     if v == aName {
-//       aExist = true
-//     } else if v == bName {
-//       bExist = true
-//     }
-//   }
-//
-//   if !aExist {
-//     t.Errorf("db %s not existed in dbs", aName)
-//   }
-//
-//   if !bExist {
-//     t.Errorf("db %s not existed in dbs", bName)
-//   }
-// }
-//
-// func TestLen(t *testing.T) {
-//   aName, bName := "dba", "dbb"
-//   s.Create(aName)
-//   defer s.Delete(aName)
-//
-//   s.Create(bName)
-//   defer s.Delete(bName)
-//
-//   if s.Len() < 2 {
-//     t.Error("server len should be >= 2")
-//   }
-// }
-//
+
+
 // func TestUUIDs(t *testing.T) {
 //   uuids := s.UUIDs(10)
 //   if reflect.ValueOf(uuids).Kind() != reflect.Slice {
