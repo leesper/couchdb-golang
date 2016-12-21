@@ -90,7 +90,7 @@ func (s *Server)ActiveTasks() ([]interface{}, error) {
   return tasks, nil
 }
 
-// DBs returns a list of all the databases in the CouchDB instance.
+// DBs returns a list of all the databases in the CouchDB server instance.
 func (s *Server)DBs() ([]string, error) {
   var dbs []string
   _, data, err := s.resource.GetJSON("_all_dbs", nil, nil)
@@ -118,6 +118,7 @@ func (s *Server)Stats(node, entry string) (map[string]interface{}, error) {
   return stats, nil
 }
 
+// Len returns the number of dbs in CouchDB server instance.
 func (s *Server)Len() (int, error) {
   dbs, err := s.DBs()
   if err != nil {
@@ -125,6 +126,55 @@ func (s *Server)Len() (int, error) {
   }
   return len(dbs), nil
 }
+
+// Create returns a database instance with the given name, returns true if created,
+// if database already existed, returns false, *Database will be nil if failed.
+func (s *Server)Create(name string) (*Database, error) {
+  _, _, err := s.resource.PutJSON(name, nil, nil, nil)
+
+  // ErrPreconditionFailed means database with the given name already existed
+  if err != nil && err != ErrPreconditionFailed {
+    return nil, err
+  }
+
+  db, getErr := s.Get(name)
+  if getErr != nil {
+    return nil, getErr
+  }
+  return db, err
+}
+
+// Delete deletes a database with the given name. Return false if failed.
+func (s *Server)Delete(name string) error {
+  _, _, err := s.resource.DeleteJSON(name, nil, nil)
+  return err
+}
+
+// Get gets a database instance with the given name. Return nil if failed.
+func (s *Server)Get(name string) (*Database, error) {
+  res, err := s.resource.NewResourceWithURL(name)
+  if err != nil {
+    return nil, err
+  }
+
+  db, err := NewDatabaseWithResource(res)
+  if err != nil {
+    return nil, err
+  }
+
+  _, _, err = db.resource.Head("", nil, nil)
+  if err != nil {
+    return nil, err
+  }
+  return db, nil
+}
+
+// Contains returns true if a db with given name exsited.
+func (s *Server)Contains(name string) bool {
+  _, _, err := s.resource.Head(name, nil, nil)
+  return err == nil
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 
@@ -206,46 +256,6 @@ func (s *Server)UUIDs(count int) []string {
   return uuids
 }
 
-// Create returns a database instance with the given name, returns true if created,
-// if database already existed, returns false, *Database will be nil if failed.
-func (s *Server)Create(name string) (*Database, bool) {
-  _, _, err := s.resource.PutJSON(name, nil, nil, nil)
-
-  // PreconditionFailed means database with the given name already existed
-  if err != nil && err != ErrPreconditionFailed {
-    return nil, false
-  }
-
-  db := s.GetDatabase(name)
-
-  return db, db != nil && err == nil
-}
-
-// Delete deletes a database with the given name. Return false if failed.
-func (s *Server)Delete(db string) bool {
-  _, _, err := s.resource.DeleteJSON(db, nil, nil)
-
-  return err == nil
-}
-
-// GetDatabase gets a database instance with the given name. Return nil if failed.
-func (s *Server)GetDatabase(name string) *Database {
-  res, err := s.resource.NewResourceWithURL(name)
-  if err != nil {
-    return nil
-  }
-
-  db := NewDatabaseWithResource(res)
-  if db == nil {
-    return nil
-  }
-
-  _, _, err = db.resource.Head("", nil, nil)
-  if err != nil {
-    return nil
-  }
-  return db
-}
 
 // newResource returns an url string representing a resource under server.
 func (s *Server)newResource(resource string) string {
@@ -258,10 +268,10 @@ func (s *Server)newResource(resource string) string {
 
 // AddUser adds regular user in authentication database.
 // Returns id and rev of the registered user.
-func (s *Server)AddUser(name, password string, roles []string) (string, string) {
-  db := s.GetDatabase("_users")
-  if db == nil {
-    return "", ""
+func (s *Server)AddUser(name, password string, roles []string) (string, string, error) {
+  db, err := s.Get("_users")
+  if err != nil {
+    return "", "", err
   }
 
   if roles == nil {
@@ -276,7 +286,8 @@ func (s *Server)AddUser(name, password string, roles []string) (string, string) 
     "type": "user",
   }
 
-  return db.Save(userDoc)
+  id, rev := db.Save(userDoc)
+  return id, rev, nil
 }
 
 // Login regular user in CouchDB, returns authentication token.
@@ -313,8 +324,8 @@ func (s *Server)Logout(token string) bool {
 
 // RemoveUser removes regular user in authentication database.
 func (s *Server)RemoveUser(name string) bool {
-  db := s.GetDatabase("_users")
-  if db == nil {
+  db, err := s.Get("_users")
+  if err != nil {
     return false
   }
   docId := "org.couchdb.user:" + name

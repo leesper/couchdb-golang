@@ -38,37 +38,39 @@ type Database struct {
 }
 
 // NewDatabase returns a CouchDB database instance.
-func NewDatabase(urlStr string) *Database {
+func NewDatabase(urlStr string) (*Database, error) {
   var dbUrlStr string
   if !strings.HasPrefix(urlStr, "http") {
     base, err := url.Parse(getDefaultCouchDBURL())
     if err != nil {
-      return nil
+      return nil, err
     }
     dbUrl, err := base.Parse(urlStr)
     if err != nil {
-      return nil
+      return nil, err
     }
     dbUrlStr = dbUrl.String()
   } else {
     dbUrlStr = urlStr
   }
+
   res, err := NewResource(dbUrlStr, nil)
-
   if err != nil {
-    return nil
+    return nil, err
   }
 
-  return &Database{
-    resource: res,
-  }
+  return newDatabase(res)
 }
 
 // NewDatabaseWithResource returns a CouchDB database instance with resource obj.
-func NewDatabaseWithResource(res *Resource) *Database {
+func NewDatabaseWithResource(res *Resource) (*Database, error) {
+  return newDatabase(res)
+}
+
+func newDatabase(res *Resource) (*Database, error) {
   return &Database{
     resource: res,
-  }
+  }, nil
 }
 
 // Name returns the name of database.
