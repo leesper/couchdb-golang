@@ -2,7 +2,7 @@ package couchdb
 
 import(
   "encoding/json"
-  // "fmt"
+  "fmt"
   // "log"
   "net/http"
   "net/url"
@@ -42,18 +42,65 @@ func newServer(urlStr string, fullCommit bool) (*Server, error) {
   return s, nil
 }
 
+// Config returns the entire CouchDB server configuration as JSON structure.
+func (s *Server)Config(node string) (map[string]map[string]string, error) {
+  _, data, err := s.resource.GetJSON(fmt.Sprintf("_node/%s/_config", node), nil, nil)
+  if err != nil {
+    return nil, err
+  }
+  var config map[string]map[string]string
+  err = json.Unmarshal(*data, &config)
+  if err != nil {
+    return nil, err
+  }
+  return config, nil
+}
+
 // Version returns the version info about CouchDB instance.
-func (s *Server)Version() string {
+func (s *Server)Version() (string, error) {
   var jsonMap map[string]interface{}
 
-  _, jsonData, err := s.resource.GetJSON("", nil, nil)
+  _, data, err := s.resource.GetJSON("", nil, nil)
   if err != nil {
-    return ""
+    return "", err
   }
-  json.Unmarshal(*jsonData, &jsonMap)
+  err = json.Unmarshal(*data, &jsonMap)
+  if err != nil {
+    return "", err
+  }
 
-  return jsonMap["version"].(string)
+  return jsonMap["version"].(string), nil
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ActiveTasks lists of running tasks.
 func (s *Server)ActiveTasks() []interface{} {

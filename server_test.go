@@ -2,7 +2,7 @@ package couchdb
 
 import (
   // "fmt"
-  // "reflect"
+  "reflect"
   // "strings"
   "testing"
 )
@@ -14,33 +14,47 @@ func init() {
 }
 
 func TestNewServer(t *testing.T) {
-  _, err := NewServer(DEFAULT_BASE_URL)
+  server, err := NewServer("http://root:likejun@localhost:5984")
   if err != nil {
     t.Error(`new server error`, err)
   }
-  // _, err = server.Config()
-  // if err != nil {
-  //   t.Error(`server config error`, err)
-  // }
+  _, err = server.Version()
+  if err != nil {
+    t.Error(`server version error`, err)
+  }
 }
 
 func TestNewServerNoFullCommit(t *testing.T) {
-  _, err := NewServerNoFullCommit(DEFAULT_BASE_URL)
+  server, err := NewServerNoFullCommit("http://root:likejun@localhost:5984")
   if err != nil {
     t.Error(`new server full commit error`, err)
   }
-  // _, err = server.Config()
-  // if err != nil {
-  //   t.Error(`server config error`, err)
-  // }
+  _, err = server.Version()
+  if err != nil {
+    t.Error(`server version error`, err)
+  }
 }
 
 func TestServerExists(t *testing.T) {
-  _, err := NewServer("http://localhost:9999")
+  server, err := NewServer("http://localhost:9999")
   if err != nil {
     t.Error(`new server error`, err)
   }
-  
+
+  _, err = server.Version()
+  if err == nil {
+    t.Error(`server version ok`)
+  }
+}
+
+func TestServerConfig(t *testing.T) {
+  config, err := s.Config("couchdb@localhost")
+  if err != nil {
+    t.Error(`server config error`, err)
+  }
+  if reflect.ValueOf(config).Kind() != reflect.Map {
+    t.Error(`config not of type map`)
+  }
 }
 
 // func TestServerString(t *testing.T) {

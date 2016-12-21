@@ -34,6 +34,22 @@ var (
   ErrRequestRangeNotSatisfiable error = errors.New("status 416 - requested range not satisfiable")
   ErrExpectationFailed error = errors.New("status 417 - expectation failed")
   ErrInternalServerError error = errors.New("status 500 - internal server error")
+
+  statusErrMap = map[int]error{
+    304: ErrNotModified,
+    400: ErrBadRequest,
+    401: ErrUnauthorized,
+    403: ErrForbidden,
+    404: ErrNotFound,
+    405: ErrResourceNotAllowed,
+    406: ErrNotAcceptable,
+    409: ErrConflict,
+    412: ErrPreconditionFailed,
+    415: ErrBadContentType,
+    416: ErrRequestRangeNotSatisfiable,
+    417: ErrExpectationFailed,
+    500: ErrInternalServerError,
+  }
 )
 
 func init() {
@@ -201,6 +217,14 @@ func requestJSON(method string, u *url.URL, header http.Header, body io.Reader, 
   return hdr, &jsonData, err
 }
 
+func checkHTTPStatusError(status int) error {
+  err, ok := statusErrMap[status]
+  if !ok {
+    return nil
+  }
+  return err
+}
+
 // helper function to make real request
 func request(method string, u *url.URL, header http.Header, body io.Reader, params url.Values) (http.Header, []byte, error) {
   method = strings.ToUpper(method)
@@ -235,7 +259,7 @@ func request(method string, u *url.URL, header http.Header, body io.Reader, para
     return nil, nil ,err
   }
 
-  return rsp.Header, data, nil
+  return rsp.Header, data, checkHTTPStatusError(rsp.StatusCode)
 }
 
 // setDefault sets the default value if key not existe in header
