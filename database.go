@@ -155,29 +155,28 @@ func (d *Database) Delete(docid string) error {
 }
 
 // Set creates or updates a document with the specified ID.
-func (d *Database) Set(docid string, doc map[string]interface{}) bool {
-	if doc == nil {
-		return false
-	}
-
+func (d *Database) Set(docid string, doc map[string]interface{}) error {
 	docRes := docResource(d.resource, docid)
 	_, data, err := docRes.PutJSON("", nil, doc, nil)
 	if err != nil {
-		return false
+		return err
 	}
 
 	var jsonMap map[string]interface{}
-	json.Unmarshal(*data, &jsonMap)
+	err = json.Unmarshal(*data, &jsonMap)
+	if err != nil {
+		return err
+	}
 	doc["_id"] = jsonMap["id"].(string)
 	doc["_rev"] = jsonMap["rev"].(string)
-	return true
+	return nil
 }
 
 // Contains returns true if the database contains a document with the specified ID.
-func (d *Database) Contains(docid string) bool {
+func (d *Database) Contains(docid string) error {
 	docRes := docResource(d.resource, docid)
 	_, _, err := docRes.Head("", nil, nil)
-	return err == nil
+	return err
 }
 
 // UpdateDocuments performs a bulk update or creation of the given documents in a single HTTP request.
@@ -265,6 +264,15 @@ func (d *Database) String() string {
 	return fmt.Sprintf("Database %s", d.resource.base)
 }
 
+// Commit flushes any recent changes to the specified database to disk.
+// If the server is configured to delay commits or previous requests use the special
+// "X-Couch-Full-Commit: false" header to disable immediate commits, this method
+// can be used to ensure that non-commited changes are commited to physical storage.
+func (d *Database) Commit() error {
+	_, _, err := d.resource.PostJSON("_ensure_full_commit", nil, nil, nil)
+	return err
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
@@ -287,7 +295,7 @@ func docResource(res *Resource, docID string) *Resource {
 		return docRes
 	}
 
-	docRes, _ = res.NewResourceWithURL(docID)
+	docRes, _ = res.NewResourceWithURL(url.QueryEscape(docID))
 	return docRes
 }
 
@@ -301,15 +309,6 @@ func GenerateUUID() string {
 
 	uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 	return uuid
-}
-
-// Commit flushes any recent changes to the specified database to disk.
-// If the server is configured to delay commits or previous requests use the special
-// "X-Couch-Full-Commit: false" header to disable immediate commits, this method
-// can be used to ensure that non-commited changes are commited to physical storage.
-func (d *Database) Commit() bool {
-	_, _, err := d.resource.PostJSON("_ensure_full_commit", nil, nil, nil)
-	return err == nil
 }
 
 // GetAttachment returns the file attachment associated with the document.

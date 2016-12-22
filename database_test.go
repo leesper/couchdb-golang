@@ -1,9 +1,7 @@
 package couchdb
 
-import
-// "fmt"
-
-(
+import (
+	"bytes"
 	"net/url"
 	"testing"
 )
@@ -165,11 +163,63 @@ func TestDatabaseString(t *testing.T) {
 	}
 }
 
-// func TestCommit() {}
-// func TestCreateLargeDoc() {}
-// func TestDocIDQuoting() {}
-// func TestDisallowNaN() {}
-// func TestDisallowNilID() {}
+func TestCommit(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	if err := db.Commit(); err != nil {
+		t.Error(`db commit error`, err)
+	}
+}
+
+func TestCreateLargeDoc(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	var buf bytes.Buffer
+	// 10MB
+	for i := 0; i < 110*1024; i++ {
+		buf.WriteString("0123456789")
+	}
+	doc := map[string]interface{}{"data": buf.String()}
+	if err := db.Set("foo", doc); err != nil {
+		t.Error(`db set error`, err)
+	}
+	doc, err := db.Get("foo")
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	if doc["_id"].(string) != "foo" {
+		t.Errorf("doc[_id] = %s, want foo", doc["_id"].(string))
+	}
+}
+
+func TestDocIDQuoting(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"foo": "bar"}
+	err := db.Set("foo/bar", doc)
+	if err != nil {
+		t.Error(`db set error`, err)
+	}
+	doc, err = db.Get("foo/bar")
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	if doc["foo"].(string) != "bar" {
+		t.Errorf("doc[foo] = %s want bar", doc["foo"].(string))
+	}
+	err = db.Delete("foo/bar")
+	if err != nil {
+		t.Error(`db delete error`, err)
+	}
+	_, err = db.Get("foo/bar")
+	if err == nil {
+		t.Error(`db get foo/bar ok`)
+	}
+}
+
+func TestDisallowNaN(t *testing.T)   {}
+func TestDisallowNilID(t *testing.T) {}
+
 // func TestDocRevs() {}
 // func TestAttachmentCRUD() {}
 // func TestAttachmentCRUDWithFiles() {}

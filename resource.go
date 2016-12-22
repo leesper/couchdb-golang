@@ -89,16 +89,16 @@ func NewResource(urlStr string, header http.Header) (*Resource, error) {
 	}, nil
 }
 
-func combine(basePath, resPath, separator string) string {
+func combine(base *url.URL, resPath string) (*url.URL, error) {
 	if resPath == "" {
-		return basePath
+		return base, nil
 	}
-
-	return path.Join(basePath, resPath)
+	u, err := base.Parse(path.Join(base.Path, resPath))
+	return u, err
 }
 
 func (r *Resource) NewResourceWithURL(resStr string) (*Resource, error) {
-	u, err := r.base.Parse(combine(r.base.Path, resStr, "/"))
+	u, err := combine(r.base, resStr)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (r *Resource) NewResourceWithURL(resStr string) (*Resource, error) {
 
 // Head is a wrapper around http.Head
 func (r *Resource) Head(path string, header http.Header, params url.Values) (http.Header, []byte, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,7 +120,7 @@ func (r *Resource) Head(path string, header http.Header, params url.Values) (htt
 
 // Get is a wrapper around http.Get
 func (r *Resource) Get(path string, header http.Header, params url.Values) (http.Header, []byte, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,7 +129,7 @@ func (r *Resource) Get(path string, header http.Header, params url.Values) (http
 
 // Post is a wrapper around http.Post
 func (r *Resource) Post(path string, header http.Header, body []byte, params url.Values) (http.Header, []byte, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -138,7 +138,7 @@ func (r *Resource) Post(path string, header http.Header, body []byte, params url
 
 // Delete is a wrapper around http.Delete
 func (r *Resource) Delete(path string, header http.Header, params url.Values) (http.Header, []byte, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -147,7 +147,7 @@ func (r *Resource) Delete(path string, header http.Header, params url.Values) (h
 
 // Put is a wrapper around http.Put
 func (r *Resource) Put(path string, header http.Header, body []byte, params url.Values) (http.Header, []byte, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -156,7 +156,7 @@ func (r *Resource) Put(path string, header http.Header, body []byte, params url.
 
 // GetJSON issues a GET to the specified URL, with data returned as json
 func (r *Resource) GetJSON(path string, header http.Header, params url.Values) (http.Header, *json.RawMessage, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -165,7 +165,7 @@ func (r *Resource) GetJSON(path string, header http.Header, params url.Values) (
 
 // PostJSON issues a POST to the specified URL, with data returned as json
 func (r *Resource) PostJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, *json.RawMessage, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -180,7 +180,7 @@ func (r *Resource) PostJSON(path string, header http.Header, body map[string]int
 
 // DeleteJSON issues a DELETE to the specified URL, with data returned as json
 func (r *Resource) DeleteJSON(path string, header http.Header, params url.Values) (http.Header, *json.RawMessage, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -190,7 +190,7 @@ func (r *Resource) DeleteJSON(path string, header http.Header, params url.Values
 
 // PutJSON issues a PUT to the specified URL, with data returned as json
 func (r *Resource) PutJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, *json.RawMessage, error) {
-	u, err := r.base.Parse(combine(r.base.Path, path, "/"))
+	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -249,7 +249,6 @@ func request(method string, u *url.URL, header http.Header, body io.Reader, para
 	setDefault(&req.Header, "Accept", "application/json")
 	setDefault(&req.Header, "Content-Type", "application/json")
 	updateHeader(&req.Header, &header)
-
 	rsp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, nil, err
