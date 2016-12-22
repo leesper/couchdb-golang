@@ -235,38 +235,45 @@ func (d *Database) DocIDs() []string {
 	return ids
 }
 
-///////////////////////////////////////////////////////
 // Name returns the name of database.
-func (d *Database) Name() string {
-	info := d.databaseInfo()
-	if _, ok := info["db_name"]; !ok {
-		return ""
+func (d *Database) Name() (string, error) {
+	var name string
+	info, err := d.databaseInfo()
+	if err != nil {
+		return name, err
 	}
-
-	return info["db_name"].(string)
+	return info["db_name"].(string), nil
 }
 
-func (d *Database) databaseInfo() map[string]interface{} {
-	_, jsonData, _ := d.resource.GetJSON("", nil, url.Values{})
+func (d *Database) databaseInfo() (map[string]interface{}, error) {
+	_, data, err := d.resource.GetJSON("", nil, url.Values{})
 
-	var jsonMap map[string]interface{}
-
-	if jsonData == nil {
-		return jsonMap
+	if err != nil {
+		return nil, err
 	}
 
-	json.Unmarshal(*jsonData, &jsonMap)
+	var info map[string]interface{}
+	err = json.Unmarshal(*data, &info)
+	if err != nil {
+		return nil, err
+	}
 
-	return jsonMap
+	return info, nil
 }
+
+func (d *Database) String() string {
+	return fmt.Sprintf("Database %s", d.resource.base)
+}
+
+///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
-func (d *Database) Len() int {
-	info := d.databaseInfo()
-	if count, ok := info["doc_count"]; ok {
-		return int(count.(float64))
+func (d *Database) Len() (int, error) {
+	info, err := d.databaseInfo()
+	if err != nil {
+		return 0, err
 	}
-	return -1
+	return int(info["doc_count"].(float64)), nil
 }
 
 // docResource returns a Resource instance for docID

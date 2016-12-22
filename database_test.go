@@ -133,8 +133,38 @@ func TestSaveExistingBatch(t *testing.T) {
 	}
 }
 
-// func TestDatabaseExists() {}
-// func TestDatabaseName() {}
+func TestDatabaseExists(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	if !db.Available() {
+		t.Error(`golang-tests not available`)
+	}
+	db, _ = NewDatabase("golang-missing")
+	if db.Available() {
+		t.Error(`golang-missing available`)
+	}
+}
+
+func TestDatabaseName(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	name, err := db.Name()
+	if err != nil {
+		t.Error(`db name error`, err)
+	}
+	if name != "golang-tests" {
+		t.Error("db name %s, want golang-tests", name)
+	}
+}
+
+func TestDatabaseString(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	if db.String() != "Database http://root:likejun@localhost:5984/golang-tests" {
+		t.Error(`db string invalid`, db)
+	}
+}
+
 // func TestCommit() {}
 // func TestCreateLargeDoc() {}
 // func TestDocIDQuoting() {}
