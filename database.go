@@ -73,6 +73,13 @@ func newDatabase(res *Resource) (*Database, error) {
 	}, nil
 }
 
+// Aavailable returns true if the database is good to go.
+func (d *Database) Available() bool {
+	_, _, err := d.resource.Head("", nil, nil)
+	return err == nil
+}
+
+///////////////////////////////////////////////////////
 // Name returns the name of database.
 func (d *Database) Name() string {
 	info := d.databaseInfo()
@@ -95,12 +102,6 @@ func (d *Database) databaseInfo() map[string]interface{} {
 	json.Unmarshal(*jsonData, &jsonMap)
 
 	return jsonMap
-}
-
-// Aavailable returns true if the database is good to go.
-func (d *Database) Available() bool {
-	_, _, err := d.resource.Head("", nil, nil)
-	return err == nil
 }
 
 // Contains returns true if the database contains a document with the specified ID.

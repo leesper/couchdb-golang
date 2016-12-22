@@ -1,16 +1,32 @@
 package couchdb
-//
-// import (
-//   // "fmt"
-//   "mime"
-//   "net/url"
-//   "os"
-//   "path/filepath"
-//   "reflect"
-//   "strings"
-//   "testing"
-// )
-//
+
+import
+// "fmt"
+
+"testing"
+
+func TestNewDefaultDB(t *testing.T) {
+	db, err := NewDatabase("golang-tests")
+	if err != nil {
+		t.Errorf("new default database error %v", err)
+	}
+	if db.Available() {
+		t.Error(`db available`)
+	}
+}
+
+func TestNewDB(t *testing.T) {
+	s.Create("golang-tests")
+	db, err := NewDatabase("http://root:likejun@localhost:5984/golang-tests")
+	if err != nil {
+		t.Error(`new database error`, err)
+	}
+	if !db.Available() {
+		t.Error(`db not available`)
+	}
+	s.Delete("golang-tests")
+}
+
 // func TestSaveNew() {}
 // func TestSaveNewWithID() {}
 // func TestSaveExisting() {}
