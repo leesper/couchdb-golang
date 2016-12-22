@@ -291,7 +291,7 @@ func (s *Server) AddUser(name, password string, roles []string) (string, string,
 		"type":     "user",
 	}
 
-	id, rev, err = db.Save(userDoc)
+	id, rev, err = db.Save(userDoc, nil)
 	if err != nil {
 		return id, rev, err
 	}

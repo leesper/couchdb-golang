@@ -79,36 +79,47 @@ func (d *Database) Available() bool {
 	return err == nil
 }
 
-///////////////////////////////////////////////////////
-// Name returns the name of database.
-func (d *Database) Name() string {
-	info := d.databaseInfo()
-	if _, ok := info["db_name"]; !ok {
-		return ""
+// Save creates a new document or update an existing document.
+// If doc has no _id the server will generate a random UUID and a new document will be created.
+// Otherwise the doc's _id will be used to identify the document to create or update.
+// Trying to update an existing document with an incorrect _rev will cause failure.
+// *NOTE* It is recommended to avoid saving doc without _id and instead generate document ID on client side.
+// To avoid such problems you can generate a UUID on the client side.
+// GenerateUUID provides a simple, platform-independent implementation.
+// You can also use other third-party packages instead.
+// doc: the document to create or update.
+func (d *Database) Save(doc map[string]interface{}, options url.Values) (string, string, error) {
+	var id, rev string
+
+	var httpFunc func(string, http.Header, map[string]interface{}, url.Values) (http.Header, *json.RawMessage, error)
+	if v, ok := doc["_id"]; ok {
+		httpFunc = docResource(d.resource, v.(string)).PutJSON
+	} else {
+		httpFunc = d.resource.PostJSON
 	}
 
-	return info["db_name"].(string)
-}
-
-func (d *Database) databaseInfo() map[string]interface{} {
-	_, jsonData, _ := d.resource.GetJSON("", nil, url.Values{})
+	_, data, err := httpFunc("", nil, doc, options)
+	if err != nil {
+		return id, rev, err
+	}
 
 	var jsonMap map[string]interface{}
-
-	if jsonData == nil {
-		return jsonMap
+	err = json.Unmarshal(*data, &jsonMap)
+	if err != nil {
+		return id, rev, err
 	}
 
-	json.Unmarshal(*jsonData, &jsonMap)
+	if v, ok := jsonMap["id"]; ok {
+		id = v.(string)
+		doc["_id"] = id
+	}
 
-	return jsonMap
-}
+	if v, ok := jsonMap["rev"]; ok {
+		rev = v.(string)
+		doc["_rev"] = rev
+	}
 
-// Contains returns true if the database contains a document with the specified ID.
-func (d *Database) Contains(docid string) bool {
-	docRes := docResource(d.resource, docid)
-	_, _, err := docRes.Head("", nil, nil)
-	return err == nil
+	return id, rev, nil
 }
 
 // Get returns the document with the specified ID.
@@ -162,6 +173,42 @@ func (d *Database) Set(docid string, doc map[string]interface{}) bool {
 	return true
 }
 
+// Contains returns true if the database contains a document with the specified ID.
+func (d *Database) Contains(docid string) bool {
+	docRes := docResource(d.resource, docid)
+	_, _, err := docRes.Head("", nil, nil)
+	return err == nil
+}
+
+// UpdateDocuments performs a bulk update or creation of the given documents in a single HTTP request.
+func (d *Database) Update(docs []map[string]interface{}, options map[string]interface{}) ([]IDRev, error) {
+	results := []IDRev{}
+
+	body := map[string]interface{}{}
+	if options != nil {
+		for k, v := range options {
+			body[k] = v
+		}
+	}
+	body["docs"] = docs
+
+	_, data, err := d.resource.PostJSON("_bulk_docs", nil, body, nil)
+	if err != nil {
+		return nil, err
+	}
+	var jsonArr []map[string]interface{}
+	err = json.Unmarshal(*data, &jsonArr)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ele := range jsonArr {
+		id, rev := ele["id"].(string), ele["rev"].(string)
+		results = append(results, IDRev{Id: id, Rev: rev})
+	}
+	return results, nil
+}
+
 // DocIDs returns the IDs of all documents in database.
 func (d *Database) DocIDs() []string {
 	docRes := docResource(d.resource, "_all_docs")
@@ -188,6 +235,31 @@ func (d *Database) DocIDs() []string {
 	return ids
 }
 
+///////////////////////////////////////////////////////
+// Name returns the name of database.
+func (d *Database) Name() string {
+	info := d.databaseInfo()
+	if _, ok := info["db_name"]; !ok {
+		return ""
+	}
+
+	return info["db_name"].(string)
+}
+
+func (d *Database) databaseInfo() map[string]interface{} {
+	_, jsonData, _ := d.resource.GetJSON("", nil, url.Values{})
+
+	var jsonMap map[string]interface{}
+
+	if jsonData == nil {
+		return jsonMap
+	}
+
+	json.Unmarshal(*jsonData, &jsonMap)
+
+	return jsonMap
+}
+
 // Len returns the number of documents stored in it.
 func (d *Database) Len() int {
 	info := d.databaseInfo()
@@ -195,49 +267,6 @@ func (d *Database) Len() int {
 		return int(count.(float64))
 	}
 	return -1
-}
-
-// Save creates a new document or update an existing document.
-// If doc has no _id the server will generate a random UUID and a new document will be created.
-// Otherwise the doc's _id will be used to identify the document to create or update.
-// Trying to update an existing document with an incorrect _rev will cause failure.
-// *NOTE* It is recommended to avoid saving doc without _id and instead generate document ID on client side.
-// To avoid such problems you can generate a UUID on the client side.
-// GenerateUUID provides a simple, platform-independent implementation.
-// You can also use other third-party packages instead.
-// doc: the document to create or update.
-func (d *Database) Save(doc map[string]interface{}) (string, string, error) {
-	var id, rev string
-
-	var httpFunc func(string, http.Header, map[string]interface{}, url.Values) (http.Header, *json.RawMessage, error)
-	if v, ok := doc["_id"]; ok {
-		httpFunc = docResource(d.resource, v.(string)).PutJSON
-	} else {
-		httpFunc = d.resource.PostJSON
-	}
-
-	_, data, err := httpFunc("", nil, doc, nil)
-	if err != nil {
-		return id, rev, err
-	}
-
-	var jsonMap map[string]interface{}
-	err = json.Unmarshal(*data, &jsonMap)
-	if err != nil {
-		return id, rev, err
-	}
-
-	if v, ok := jsonMap["id"]; ok {
-		id = v.(string)
-		doc["_id"] = id
-	}
-
-	if v, ok := jsonMap["rev"]; ok {
-		rev = v.(string)
-		doc["_rev"] = rev
-	}
-
-	return id, rev, nil
 }
 
 // docResource returns a Resource instance for docID
@@ -372,35 +401,6 @@ func (d *Database) DeleteAttachment(doc map[string]interface{}, fileName string)
 type IDRev struct {
 	Id  string
 	Rev string
-}
-
-// UpdateDocuments performs a bulk update or creation of the given documents in a single HTTP request.
-func (d *Database) Update(docs []map[string]interface{}, options map[string]interface{}) ([]IDRev, error) {
-	results := []IDRev{}
-
-	body := map[string]interface{}{}
-	if options != nil {
-		for k, v := range options {
-			body[k] = v
-		}
-	}
-	body["docs"] = docs
-
-	_, data, err := d.resource.PostJSON("_bulk_docs", nil, body, nil)
-	if err != nil {
-		return nil, err
-	}
-	var jsonArr []map[string]interface{}
-	err = json.Unmarshal(*data, &jsonArr)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ele := range jsonArr {
-		id, rev := ele["id"].(string), ele["rev"].(string)
-		results = append(results, IDRev{Id: id, Rev: rev})
-	}
-	return results, nil
 }
 
 // GetRevsLimit gets the current revs_limit(revision limit) setting.

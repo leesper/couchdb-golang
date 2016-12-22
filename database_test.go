@@ -3,7 +3,10 @@ package couchdb
 import
 // "fmt"
 
-"testing"
+(
+	"net/url"
+	"testing"
+)
 
 func TestNewDefaultDB(t *testing.T) {
 	db, err := NewDatabase("golang-tests")
@@ -27,11 +30,109 @@ func TestNewDB(t *testing.T) {
 	s.Delete("golang-tests")
 }
 
-// func TestSaveNew() {}
-// func TestSaveNewWithID() {}
-// func TestSaveExisting() {}
-// func TestSaveNewBatch() {}
-// func TestSaveExistingBatch() {}
+func TestSaveNew(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"doc": "bar"}
+	id, rev, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save error`, err)
+	}
+	if id != doc["_id"].(string) {
+		t.Errorf("invalid id: %q", id)
+	}
+	if rev != doc["_rev"].(string) {
+		t.Errorf("invalid rev: %q", rev)
+	}
+}
+
+func TestSaveNewWithID(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"_id": "foo"}
+	id, rev, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save error`, err)
+	}
+	if doc["_id"].(string) != "foo" {
+		t.Errorf("doc[_id] = %s, not foo", doc["_id"])
+	}
+	if id != "foo" {
+		t.Errorf("id = %s, not foo", id)
+	}
+	if rev != doc["_rev"].(string) {
+		t.Errorf("invalid rev: %q", rev)
+	}
+}
+
+func TestSaveExisting(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{}
+	idOld, revOld, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save error`, err)
+	}
+	doc["foo"] = true
+	idNew, revNew, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save foo error`, err)
+	}
+	if idOld != idNew {
+		t.Errorf("ids are not equal old %s new %s", idOld, idNew)
+	}
+	if doc["_rev"].(string) != revNew {
+		t.Errorf("invalid rev %s want %s", doc["_rev"].(string), revNew)
+	}
+	if revOld == revNew {
+		t.Errorf("new rev is equal to old rev %s", revOld)
+	}
+}
+
+func TestSaveNewBatch(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"_id": "foo"}
+	_, rev, err := db.Save(doc, url.Values{"batch": []string{"ok"}})
+	if err != nil {
+		t.Error(`db save batch error`, err)
+	}
+	if len(rev) > 0 {
+		t.Error(`rev not empty`, rev)
+	}
+	if r, ok := doc["_rev"]; ok {
+		t.Error(`doc has _rev field`, r.(string))
+	}
+}
+
+func TestSaveExistingBatch(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"_id": "foo"}
+
+	idOld, revOld, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save error`, err)
+	}
+
+	idNew, revNew, err := db.Save(doc, url.Values{"batch": []string{"ok"}})
+	if err != nil {
+		t.Error(`db save batch error`, err)
+	}
+
+	if idOld != idNew {
+		t.Errorf("old id %s not equal to new id %s", idOld, idNew)
+	}
+
+	if len(revNew) > 0 {
+		t.Error(`rev not empty`, revNew)
+	}
+
+	if doc["_rev"].(string) != revOld {
+		t.Errorf("doc[_rev] %s not equal to old rev %s", doc["_rev"].(string), revOld)
+	}
+}
+
 // func TestDatabaseExists() {}
 // func TestDatabaseName() {}
 // func TestCommit() {}

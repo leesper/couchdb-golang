@@ -221,7 +221,7 @@ func TestReplicate(t *testing.T) {
 	dbb, _ := s.Create(bName)
 	defer s.Delete(bName)
 
-	id, _, err := dba.Save(map[string]interface{}{"test": "a"})
+	id, _, err := dba.Save(map[string]interface{}{"test": "a"}, nil)
 	if err != nil {
 		t.Error(`dba save error`, err)
 	}
