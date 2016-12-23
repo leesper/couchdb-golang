@@ -577,7 +577,41 @@ func TestJSONAttachment(t *testing.T) {
 // func TestIncludeDocs() {}
 // // TODO adding new apis about mango query engine
 // func TestQueryMultiGet() {}
-// func TestBulkUpdateConflict() {}
+func TestBulkUpdateConflict(t *testing.T) {
+	docs := []map[string]interface{}{
+		{
+			"type": "Person",
+			"name": "John Doe",
+		},
+		{
+			"type": "Person",
+			"name": "Mary Jane",
+		},
+		{
+			"type": "Person",
+			"name": "Gotham City",
+		},
+	}
+
+	db.Update(docs, nil)
+
+	// update the first doc to provoke a conflict in the next bulk update
+	doc := map[string]interface{}{}
+	for k, v := range docs[0] {
+		doc[k] = v
+	}
+	db.Set(doc["_id"].(string), doc)
+
+	results, err := db.Update(docs, nil)
+	if err != nil {
+		t.Error(`db update error`, err)
+	}
+	if results[0].err != ErrConflict {
+		t.Errorf("db update conflict err %v want ErrConflict", results[0].err)
+	}
+
+}
+
 // func TestBulkUpdateAllOrNothing() {}
 // func TestBulkUpdateBadDoc() {}
 // func TestCopyDocConflict() {}

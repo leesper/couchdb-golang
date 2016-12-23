@@ -195,10 +195,15 @@ func (d *Database) Contains(docid string) error {
 	return err
 }
 
-// UpdateDocuments performs a bulk update or creation of the given documents in a single HTTP request.
-func (d *Database) Update(docs []map[string]interface{}, options map[string]interface{}) ([]IDRev, error) {
-	results := []IDRev{}
+// Update performs a bulk update or creation of the given documents in a single HTTP request.
+// It returns a 3-tuple (id, rev, error)
+type UpdateResult struct {
+	id, rev string
+	err     error
+}
 
+func (d *Database) Update(docs []map[string]interface{}, options map[string]interface{}) ([]UpdateResult, error) {
+	results := make([]UpdateResult, len(docs))
 	body := map[string]interface{}{}
 	if options != nil {
 		for k, v := range options {
@@ -217,9 +222,36 @@ func (d *Database) Update(docs []map[string]interface{}, options map[string]inte
 		return nil, err
 	}
 
-	for _, ele := range jsonArr {
-		id, rev := ele["id"].(string), ele["rev"].(string)
-		results = append(results, IDRev{Id: id, Rev: rev})
+	for i, v := range jsonArr {
+		var retErr error
+		var result UpdateResult
+		if val, ok := v["error"]; ok {
+			errMsg := val.(string)
+			switch errMsg {
+			case "conflict":
+				retErr = ErrConflict
+			case "forbidden":
+				retErr = ErrForbidden
+			default:
+				retErr = ErrInternalServerError
+			}
+			result = UpdateResult{
+				id:  v["id"].(string),
+				rev: "",
+				err: retErr,
+			}
+		} else {
+			id, rev := v["id"].(string), v["rev"].(string)
+			result = UpdateResult{
+				id:  id,
+				rev: rev,
+				err: retErr,
+			}
+			doc := docs[i]
+			doc["_id"] = id
+			doc["_rev"] = rev
+		}
+		results[i] = result
 	}
 	return results, nil
 }
@@ -457,11 +489,6 @@ func GenerateUUID() string {
 
 	uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 	return uuid
-}
-
-type IDRev struct {
-	Id  string
-	Rev string
 }
 
 // GetRevsLimit gets the current revs_limit(revision limit) setting.
