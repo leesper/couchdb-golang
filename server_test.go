@@ -1,14 +1,33 @@
 package couchdb
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
 
 var s *Server
+var db *Database
 
-func init() {
-	s, _ = NewServer("http://root:likejun@localhost:5984")
+func TestMain(m *testing.M) {
+	// setup
+	var err error
+	s, err = NewServer("http://root:likejun@localhost:5984")
+	if err != nil {
+		os.Exit(1)
+	}
+	s.Delete("golang-tests")
+	db, err = s.Create("golang-tests")
+	if err != nil {
+		os.Exit(2)
+	}
+
+	// run all the tests
+	code := m.Run()
+
+	// tear down
+	s.Delete("golang-tests")
+	os.Exit(code)
 }
 
 func TestNewServer(t *testing.T) {
@@ -144,26 +163,21 @@ func TestLen(t *testing.T) {
 }
 
 func TestGetDBMissing(t *testing.T) {
-	_, err := s.Get("golang-tests")
+	_, err := s.Get("golang-missing")
 	if err != ErrNotFound {
 		t.Errorf("err = %v want ErrNotFound", err)
 	}
 }
 
 func TestGetDB(t *testing.T) {
-	_, err := s.Create("golang-tests")
-	if err != nil {
-		t.Error(`create db error`, err)
-	}
-	_, err = s.Get("golang-tests")
+	_, err := s.Get("golang-tests")
 	if err != nil {
 		t.Error(`get db error`, err)
 	}
-	s.Delete("golang-tests")
 }
 
 func TestCreateDBConflict(t *testing.T) {
-	conflictDBName := "golang-tests"
+	conflictDBName := "golang-conflict"
 	_, err := s.Create(conflictDBName)
 	if err != nil {
 		t.Error(`server create error`, err)
@@ -179,11 +193,11 @@ func TestCreateDBConflict(t *testing.T) {
 }
 
 func TestCreateDB(t *testing.T) {
-	_, err := s.Create("golang-tests")
+	_, err := s.Create("golang-create")
 	if err != nil {
 		t.Error(`get db failed`)
 	}
-	s.Delete("golang-tests")
+	s.Delete("golang-create")
 }
 
 func TestCreateDBIllegal(t *testing.T) {
@@ -193,7 +207,7 @@ func TestCreateDBIllegal(t *testing.T) {
 }
 
 func TestDeleteDB(t *testing.T) {
-	dbName := "golang-tests"
+	dbName := "golang-delete"
 	s.Create(dbName)
 	if !s.Contains(dbName) {
 		t.Error(`server not contains`, dbName)
@@ -205,7 +219,7 @@ func TestDeleteDB(t *testing.T) {
 }
 
 func TestDeleteDBMissing(t *testing.T) {
-	dbName := "golang-tests"
+	dbName := "golang-missing"
 	err := s.Delete(dbName)
 	if err != ErrNotFound {
 		t.Errorf("err = %v want ErrNotFound", err)
@@ -328,7 +342,7 @@ func TestUUIDs(t *testing.T) {
 
 func TestBasicAuth(t *testing.T) {
 	server, _ := NewServer("http://root:password@localhost:5984/")
-	_, err := server.Create("golang-tests")
+	_, err := server.Create("golang-auth")
 	if err != ErrUnauthorized {
 		t.Errorf("err = %v want ErrUnauthorized", err)
 	}

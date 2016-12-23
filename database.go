@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -330,6 +329,94 @@ func (d *Database) Revisions(docid string, options url.Values) ([]map[string]int
 	return docs, nil
 }
 
+// GetAttachment returns the file attachment associated with the document.
+// The raw data is returned as a []byte.
+func (d *Database) GetAttachment(doc map[string]interface{}, name string) ([]byte, error) {
+	docid, ok := doc["_id"]
+	if !ok {
+		return nil, errors.New("doc _id not existed")
+	}
+	return d.getAttachment(docid.(string), name)
+}
+
+// GetAttachmentID returns the file attachment associated with the document ID.
+// The raw data is returned as []byte.
+func (d *Database) GetAttachmentID(docid, name string) ([]byte, error) {
+	return d.getAttachment(docid, name)
+}
+
+func (d *Database) getAttachment(docid, name string) ([]byte, error) {
+	docRes := docResource(docResource(d.resource, docid), name)
+	_, data, err := docRes.Get("", nil, nil)
+	return data, err
+}
+
+// PutAttachment uploads the supplied []byte as an attachment to the specified document.
+// doc: the document that the attachment belongs to. Must have _id and _rev inside.
+// content: the data to be attached to doc.
+// name: name of attachment.
+// mimeType: MIME type of content.
+func (d *Database) PutAttachment(doc map[string]interface{}, content []byte, name, mimeType string) error {
+	if id, ok := doc["_id"]; !ok || id.(string) == "" {
+		return errors.New("doc _id not existed")
+	}
+	if rev, ok := doc["_rev"]; !ok || rev.(string) == "" {
+		return errors.New("doc _rev not extisted")
+	}
+
+	id, rev := doc["_id"].(string), doc["_rev"].(string)
+
+	docRes := docResource(docResource(d.resource, id), name)
+	header := http.Header{}
+	header.Set("Content-Type", mimeType)
+	params := url.Values{}
+	params.Set("rev", rev)
+
+	_, data, err := docRes.Put("", header, content, params)
+	if err != nil {
+		return err
+	}
+
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal(data, &jsonMap)
+	if err != nil {
+		return err
+	}
+
+	doc["_rev"] = jsonMap["rev"].(string)
+
+	return nil
+}
+
+// DeleteAttachment deletes the specified attachment
+func (d *Database) DeleteAttachment(doc map[string]interface{}, name string) error {
+	if id, ok := doc["_id"]; !ok || id.(string) == "" {
+		return errors.New("doc _id not existed")
+	}
+	if rev, ok := doc["_rev"]; !ok || rev.(string) == "" {
+		return errors.New("doc _rev not extisted")
+	}
+
+	id, rev := doc["_id"].(string), doc["_rev"].(string)
+
+	params := url.Values{}
+	params.Set("rev", rev)
+	docRes := docResource(docResource(d.resource, id), name)
+	_, data, err := docRes.DeleteJSON("", nil, params)
+	if err != nil {
+		return err
+	}
+
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal(*data, &jsonMap)
+	if err != nil {
+		return err
+	}
+	doc["_rev"] = jsonMap["rev"]
+
+	return nil
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
@@ -343,6 +430,10 @@ func (d *Database) Len() (int, error) {
 
 // docResource returns a Resource instance for docID
 func docResource(res *Resource, docID string) *Resource {
+	if len(docID) == 0 {
+		return res
+	}
+
 	var docRes *Resource
 	if docID[:1] == "_" {
 		paths := strings.SplitN(docID, "/", 2)
@@ -366,99 +457,6 @@ func GenerateUUID() string {
 
 	uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 	return uuid
-}
-
-// GetAttachment returns the file attachment associated with the document.
-// The raw data of the associated attachment is returned as a []byte.
-func (d *Database) GetAttachment(docid, fileName string) ([]byte, bool) {
-	// defensive check
-	if len(docid) == 0 || len(fileName) == 0 {
-		return nil, false
-	}
-
-	docRes := docResource(docResource(d.resource, docid), fileName)
-	_, data, err := docRes.Get("", nil, nil)
-	return data, err == nil
-}
-
-// PutAttachment uploads the supplied *os.File as an attachment to the specified document.
-// doc: the document that the attachment belongs to. Must have _id and _rev inside.
-func (d *Database) PutAttachment(doc map[string]interface{}, file *os.File, mimeType string) bool {
-	// defensive check
-	if doc == nil || file == nil || len(mimeType) == 0 {
-		return false
-	}
-
-	if _, ok := doc["_id"]; !ok {
-		return false
-	}
-	if _, ok := doc["_rev"]; !ok {
-		return false
-	}
-
-	id, rev := doc["_id"].(string), doc["_rev"].(string)
-
-	if len(id) == 0 || len(rev) == 0 {
-		return false
-	}
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return false
-	}
-
-	contents, err := ioutil.ReadAll(file)
-	if err != nil {
-		return false
-	}
-
-	docRes := docResource(docResource(d.resource, id), fileInfo.Name())
-	header := http.Header{}
-	header.Set("Content-Type", mimeType)
-	params := url.Values{}
-	params.Set("rev", rev)
-
-	_, data, err := docRes.Put("", header, contents, params)
-	if err == nil {
-		var jsonMap map[string]interface{}
-		json.Unmarshal(data, &jsonMap)
-		doc["_rev"] = jsonMap["rev"].(string)
-	}
-
-	return err == nil
-}
-
-// DeleteAttachment deletes the specified attachment
-func (d *Database) DeleteAttachment(doc map[string]interface{}, fileName string) bool {
-	// defensive check
-	if doc == nil || len(fileName) == 0 {
-		return false
-	}
-
-	if _, ok := doc["_id"]; !ok {
-		return false
-	}
-
-	if _, ok := doc["_rev"]; !ok {
-		return false
-	}
-
-	id, rev := doc["_id"].(string), doc["_rev"].(string)
-
-	if len(id) == 0 || len(rev) == 0 {
-		return false
-	}
-
-	params := url.Values{}
-	params.Set("rev", rev)
-	docRes := docResource(docResource(d.resource, id), fileName)
-	_, data, err := docRes.DeleteJSON("", nil, params)
-	if err == nil {
-		var jsonMap map[string]interface{}
-		json.Unmarshal(*data, &jsonMap)
-		doc["_rev"] = jsonMap["rev"]
-	}
-	return err == nil
 }
 
 type IDRev struct {

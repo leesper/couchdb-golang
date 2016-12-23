@@ -2,36 +2,40 @@ package couchdb
 
 import (
 	"bytes"
+	"io/ioutil"
 	"math"
+	"mime"
 	"net/url"
+	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 )
 
 func TestNewDefaultDB(t *testing.T) {
-	db, err := NewDatabase("golang-tests")
+	dbDefault, err := NewDatabase("golang-default")
 	if err != nil {
 		t.Errorf("new default database error %v", err)
 	}
-	if db.Available() {
+	if dbDefault.Available() {
 		t.Error(`db available`)
 	}
 }
 
 func TestNewDB(t *testing.T) {
-	s.Create("golang-tests")
-	db, err := NewDatabase("http://root:likejun@localhost:5984/golang-tests")
+	newDB := "golang-newdb"
+	s.Create(newDB)
+	defer s.Delete(newDB)
+	dbNew, err := NewDatabase("http://root:likejun@localhost:5984/" + newDB)
 	if err != nil {
 		t.Error(`new database error`, err)
 	}
-	if !db.Available() {
+	if !dbNew.Available() {
 		t.Error(`db not available`)
 	}
-	s.Delete("golang-tests")
 }
 
 func TestSaveNew(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{"doc": "bar"}
 	id, rev, err := db.Save(doc, nil)
 	if err != nil {
@@ -46,8 +50,6 @@ func TestSaveNew(t *testing.T) {
 }
 
 func TestSaveNewWithID(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{"_id": "foo"}
 	id, rev, err := db.Save(doc, nil)
 	if err != nil {
@@ -65,8 +67,6 @@ func TestSaveNewWithID(t *testing.T) {
 }
 
 func TestSaveExisting(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{}
 	idOld, revOld, err := db.Save(doc, nil)
 	if err != nil {
@@ -89,8 +89,6 @@ func TestSaveExisting(t *testing.T) {
 }
 
 func TestSaveNewBatch(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{"_id": "foo"}
 	_, rev, err := db.Save(doc, url.Values{"batch": []string{"ok"}})
 	if err != nil {
@@ -105,10 +103,7 @@ func TestSaveNewBatch(t *testing.T) {
 }
 
 func TestSaveExistingBatch(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
-	doc := map[string]interface{}{"_id": "foo"}
-
+	doc := map[string]interface{}{"_id": "bar"}
 	idOld, revOld, err := db.Save(doc, nil)
 	if err != nil {
 		t.Error(`db save error`, err)
@@ -133,20 +128,16 @@ func TestSaveExistingBatch(t *testing.T) {
 }
 
 func TestDatabaseExists(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	if !db.Available() {
 		t.Error(`golang-tests not available`)
 	}
-	db, _ = NewDatabase("golang-missing")
-	if db.Available() {
+	dbMissing, _ := NewDatabase("golang-missing")
+	if dbMissing.Available() {
 		t.Error(`golang-missing available`)
 	}
 }
 
 func TestDatabaseName(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	name, err := db.Name()
 	if err != nil {
 		t.Error(`db name error`, err)
@@ -157,39 +148,33 @@ func TestDatabaseName(t *testing.T) {
 }
 
 func TestDatabaseString(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	if db.String() != "Database http://root:likejun@localhost:5984/golang-tests" {
 		t.Error(`db string invalid`, db)
 	}
 }
 
 func TestCommit(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	if err := db.Commit(); err != nil {
 		t.Error(`db commit error`, err)
 	}
 }
 
 func TestCreateLargeDoc(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	var buf bytes.Buffer
 	// 10MB
 	for i := 0; i < 110*1024; i++ {
 		buf.WriteString("0123456789")
 	}
 	doc := map[string]interface{}{"data": buf.String()}
-	if err := db.Set("foo", doc); err != nil {
+	if err := db.Set("large", doc); err != nil {
 		t.Error(`db set error`, err)
 	}
-	doc, err := db.Get("foo", nil)
+	doc, err := db.Get("large", nil)
 	if err != nil {
 		t.Error(`db get error`, err)
 	}
-	if doc["_id"].(string) != "foo" {
-		t.Errorf("doc[_id] = %s, want foo", doc["_id"].(string))
+	if doc["_id"].(string) != "large" {
+		t.Errorf("doc[_id] = %s, want large", doc["_id"].(string))
 	}
 	err = db.DeleteDoc(doc)
 	if err != nil {
@@ -198,8 +183,6 @@ func TestCreateLargeDoc(t *testing.T) {
 }
 
 func TestDocIDQuoting(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{"foo": "bar"}
 	err := db.Set("foo/bar", doc)
 	if err != nil {
@@ -223,8 +206,6 @@ func TestDocIDQuoting(t *testing.T) {
 }
 
 func TestDisallowNaN(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	doc := map[string]interface{}{"number": math.NaN()}
 	err := db.Set("foo", doc)
 	if err == nil {
@@ -233,8 +214,6 @@ func TestDisallowNaN(t *testing.T) {
 }
 
 func TestDisallowNilID(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
 	err := db.DeleteDoc(map[string]interface{}{"_id": nil, "_rev": nil})
 	if err == nil {
 		t.Error(`db delete doc with id nil ok`)
@@ -246,36 +225,34 @@ func TestDisallowNilID(t *testing.T) {
 }
 
 func TestDocRevs(t *testing.T) {
-	db, _ := s.Create("golang-tests")
-	defer s.Delete("golang-tests")
-
+	uuid := GenerateUUID()
 	doc := map[string]interface{}{"bar": 42}
-	err := db.Set("foo", doc)
+	err := db.Set(uuid, doc)
 	if err != nil {
 		t.Error(`db set doc error`, err)
 	}
 	oldRev := doc["_rev"].(string)
 	doc["bar"] = 43
-	err = db.Set("foo", doc)
+	err = db.Set(uuid, doc)
 	if err != nil {
 		t.Error(`db set doc error`, err)
 	}
 	newRev := doc["_rev"].(string)
 
-	newDoc, err := db.Get("foo", nil)
+	newDoc, err := db.Get(uuid, nil)
 	if newRev != newDoc["_rev"].(string) {
 		t.Errorf("new doc rev %s not equal to %s", newDoc["_rev"].(string), newRev)
 	}
-	newDoc, err = db.Get("foo", url.Values{"rev": []string{newRev}})
+	newDoc, err = db.Get(uuid, url.Values{"rev": []string{newRev}})
 	if newRev != newDoc["_rev"].(string) {
 		t.Errorf("new doc rev %s not equal to %s", newDoc["_rev"].(string), newRev)
 	}
-	oldDoc, err := db.Get("foo", url.Values{"rev": []string{oldRev}})
+	oldDoc, err := db.Get(uuid, url.Values{"rev": []string{oldRev}})
 	if oldRev != oldDoc["_rev"].(string) {
 		t.Errorf("old doc rev %s not equal to %s", oldDoc["_rev"].(string), oldRev)
 	}
 
-	revs, err := db.Revisions("foo", nil)
+	revs, err := db.Revisions(uuid, nil)
 	if err != nil {
 		t.Error(`db revisions error`, err)
 	}
@@ -306,20 +283,297 @@ func TestDocRevs(t *testing.T) {
 		}
 	}
 
-	doc, err = db.Get("foo", url.Values{"rev": []string{oldRev}})
+	doc, err = db.Get(uuid, url.Values{"rev": []string{oldRev}})
 	if err == nil {
 		t.Errorf("db get compacted doc ok, rev = %s", oldRev)
 	}
-
 }
 
-// func TestAttachmentCRUD() {}
-// func TestAttachmentCRUDWithFiles() {}
-// func TestAttachmentFromFS() {}
-// func TestEmptyAttachment() {}
-// func TestDefaultAttachment() {}
-// func TestAttachmentNoFilename() {}
-// func TestJSONAttachment() {}
+func TestAttachmentCRUD(t *testing.T) {
+	uuid := GenerateUUID()
+	doc := map[string]interface{}{"bar": 42}
+	db.Set(uuid, doc)
+	oldRev := doc["_rev"].(string)
+
+	db.PutAttachment(doc, []byte("Foo bar"), "foo.txt", "text/plain")
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err := db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	attachments := reflect.ValueOf(doc["_attachments"])
+	foo := reflect.ValueOf(attachments.MapIndex(reflect.ValueOf("foo.txt")).Interface())
+	length := int(foo.MapIndex(reflect.ValueOf("length")).Interface().(float64))
+	if length != len("Foo bar") {
+		t.Errorf("length %d want %d", length, len("Foo bar"))
+	}
+	contentType := foo.MapIndex(reflect.ValueOf("content_type")).Interface().(string)
+	if contentType != "text/plain" {
+		t.Errorf("content type %s want text/plain", contentType)
+	}
+
+	data, err := db.GetAttachment(doc, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment error`, err)
+	}
+	if string(data) != "Foo bar" {
+		t.Errorf("db get attachment %s want Foo bar", string(data))
+	}
+
+	data, err = db.GetAttachmentID(uuid, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment id error`, err)
+	}
+	if string(data) != "Foo bar" {
+		t.Errorf("db get attachment id %s want Foo bar", string(data))
+	}
+
+	oldRev = doc["_rev"].(string)
+	err = db.DeleteAttachment(doc, "foo.txt")
+	if err != nil {
+		t.Error(`db delete attachment error`, err)
+	}
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	if _, ok := doc["_attachments"]; ok {
+		t.Error(`doc attachments still existed`)
+	}
+}
+
+func TestAttachmentWithFiles(t *testing.T) {
+	uuid := GenerateUUID()
+	doc := map[string]interface{}{"bar": 42}
+	err := db.Set(uuid, doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	oldRev := doc["_rev"].(string)
+	fileObj := []byte("Foo bar baz")
+
+	err = db.PutAttachment(doc, fileObj, "foo.txt", mime.TypeByExtension(".txt"))
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	attachments := reflect.ValueOf(doc["_attachments"])
+	foo := reflect.ValueOf(attachments.MapIndex(reflect.ValueOf("foo.txt")).Interface())
+	length := int(foo.MapIndex(reflect.ValueOf("length")).Interface().(float64))
+	if length != len("Foo bar baz") {
+		t.Errorf("length %d want %d", length, len("Foo bar"))
+	}
+	contentType := foo.MapIndex(reflect.ValueOf("content_type")).Interface().(string)
+	if contentType != "text/plain; charset=utf-8" {
+		t.Errorf("content type %s want text/plain; charset=utf-8", contentType)
+	}
+
+	data, err := db.GetAttachment(doc, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment error`, err)
+	}
+	if string(data) != "Foo bar baz" {
+		t.Errorf("db get attachment %s want Foo bar", string(data))
+	}
+
+	data, err = db.GetAttachmentID(uuid, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment id error`, err)
+	}
+	if string(data) != "Foo bar baz" {
+		t.Errorf("db get attachment id %s want Foo bar", string(data))
+	}
+
+	oldRev = doc["_rev"].(string)
+	err = db.DeleteAttachment(doc, "foo.txt")
+	if err != nil {
+		t.Error(`db delete attachment error`, err)
+	}
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	if _, ok := doc["_attachments"]; ok {
+		t.Error(`doc attachments still existed`)
+	}
+}
+
+func TestAttachmentCRUDFromFS(t *testing.T) {
+	uuid := GenerateUUID()
+	content := "Foo bar baz"
+	tmpFileName := filepath.Join(os.TempDir(), "foo.txt")
+	tmpFile, err := os.Create(tmpFileName)
+	if err != nil {
+		t.Error(`create file error`, err)
+	}
+	_, err = tmpFile.Write([]byte(content))
+	if err != nil {
+		t.Error(`write file error`, err)
+	}
+	tmpFile.Close()
+
+	tmpFile, err = os.Open(tmpFileName)
+	if err != nil {
+		t.Error(`open file error`, err)
+	}
+	defer tmpFile.Close()
+
+	data, err := ioutil.ReadAll(tmpFile)
+	if err != nil {
+		t.Error(`read tmp file error`, err)
+	}
+
+	doc := map[string]interface{}{"bar": 42}
+	err = db.Set(uuid, doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	oldRev := doc["_rev"].(string)
+	err = db.PutAttachment(doc, data, "foo.txt", mime.TypeByExtension(filepath.Ext(tmpFileName)))
+	if err != nil {
+		t.Error(`put attachment error`, err)
+	}
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	attachment := reflect.ValueOf(doc["_attachments"])
+	foo := reflect.ValueOf(attachment.MapIndex(reflect.ValueOf("foo.txt")).Interface())
+	length := int(foo.MapIndex(reflect.ValueOf("length")).Interface().(float64))
+	if len(content) != length {
+		t.Errorf("length %d want %d", length, len(content))
+	}
+	contentType := foo.MapIndex(reflect.ValueOf("content_type")).Interface().(string)
+	if contentType != "text/plain; charset=utf-8" {
+		t.Errorf("content type %s want text/plain; charset=utf-8", contentType)
+	}
+
+	data, err = db.GetAttachment(doc, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment error`, err)
+	}
+	if string(data) != content {
+		t.Error(`get attachment should be `, content)
+	}
+
+	data, err = db.GetAttachmentID(uuid, "foo.txt")
+	if err != nil {
+		t.Error(`get attachment id error`, err)
+	}
+	if string(data) != content {
+		t.Error(`get attachment id should be `, content)
+	}
+
+	if err = db.DeleteAttachment(doc, "foo.txt"); err != nil {
+		t.Error(`delete attachment file error`, err)
+	}
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	if _, ok := doc["_attachments"]; ok {
+		t.Error(`doc attachments still existed`)
+	}
+}
+
+func TestEmptyAttachment(t *testing.T) {
+	uuid := GenerateUUID()
+	doc := map[string]interface{}{}
+	err := db.Set(uuid, doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	oldRev := doc["_rev"].(string)
+
+	err = db.PutAttachment(doc, []byte(""), "empty.txt", mime.TypeByExtension(".txt"))
+	if err != nil {
+		t.Error(`put attachment error`, err)
+	}
+	if oldRev == doc["_rev"].(string) {
+		t.Error(`doc[_rev] == oldRev`)
+	}
+
+	doc, err = db.Get(uuid, nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+
+	attachment := reflect.ValueOf(doc["_attachments"])
+	empty := reflect.ValueOf(attachment.MapIndex(reflect.ValueOf("empty.txt")).Interface())
+	length := int(empty.MapIndex(reflect.ValueOf("length")).Interface().(float64))
+	if length != 0 {
+		t.Errorf("length %d want %d", length, 0)
+	}
+}
+
+func TestDefaultAttachment(t *testing.T) {
+	uuid := GenerateUUID()
+	doc := map[string]interface{}{}
+	err := db.Set(uuid, doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	_, err = db.GetAttachment(doc, "missing.txt")
+	if err == nil {
+		t.Error(`db get attachment ok`)
+	}
+}
+
+func TestAttachmentNoFilename(t *testing.T) {
+	uuid := GenerateUUID()
+	doc := map[string]interface{}{}
+	err := db.Set(uuid, doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	err = db.PutAttachment(doc, []byte(""), "", "")
+	if err == nil {
+		t.Error(`db put attachment with no file name ok`)
+	}
+}
+
+func TestJSONAttachment(t *testing.T) {
+	doc := map[string]interface{}{}
+	err := db.Set(GenerateUUID(), doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	err = db.PutAttachment(doc, []byte("{}"), "test.json", "application/json")
+	if err != nil {
+		t.Error(`db put attachment json error`, err)
+	}
+	data, err := db.GetAttachment(doc, "test.json")
+	if err != nil {
+		t.Error(`db get attachment json error`, err)
+	}
+	if string(data) != "{}" {
+		t.Errorf("data = %s want {}", string(data))
+	}
+}
+
 // func TestIncludeDocs() {}
 // // TODO adding new apis about mango query engine
 // func TestQueryMultiGet() {}
@@ -343,17 +597,6 @@ func TestDocRevs(t *testing.T) {
 //
 //
 //
-// func TestDatabaseName(t *testing.T) {
-//   s.Create("golang-tests")
-//   db := NewDatabase("http://root:likejun@localhost:5984/golang-tests")
-//   if (db == nil) {
-//     t.Error(`db should be non-nil`)
-//   }
-//   if (db.Name() != "golang-tests") {
-//     t.Error(`should return db name`)
-//   }
-//   s.Delete("golang-tests")
-// }
 //
 // func TestDatabaseSave(t *testing.T) {
 //   db, _ := s.Create("golang-tests")
@@ -459,50 +702,6 @@ func TestDocRevs(t *testing.T) {
 //   s.Delete("golang-tests")
 // }
 //
-// func TestPutGetDeleteAttachment(t *testing.T) {
-//   content := "hello couch"
-//   db, _ := s.Create("golang-tests")
-//   tmpFileName := filepath.Join(os.TempDir(), "test.txt")
-//   tmpFile, err := os.Create(tmpFileName)
-//   if err != nil {
-//     t.Error(`create file error`, err)
-//   }
-//   _, err = tmpFile.Write([]byte(content))
-//   if err != nil {
-//     t.Error(`write file error`, err)
-//   }
-//   tmpFile.Close()
-//
-//   tmpFile, err = os.Open(tmpFileName)
-//   if err != nil {
-//     t.Error(`open file error`, err)
-//   }
-//   defer tmpFile.Close()
-//
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "Jason Statham",
-//   }
-//   db.Set(GenerateUUID(), doc)
-//   if !db.PutAttachment(doc, tmpFile, mime.TypeByExtension(filepath.Ext(tmpFileName))) {
-//     t.Error(`put attachment should return true`)
-//   }
-//
-//   data, ok := db.GetAttachment(doc["_id"].(string), "test.txt")
-//   if !ok {
-//     t.Error(`get attachment should return true`)
-//   }
-//
-//   if string(data) != content {
-//     t.Error(`read data should be `, content)
-//   }
-//
-//   if !db.DeleteAttachment(doc, tmpFileName) {
-//     t.Error(`delete attachment file failed`)
-//   }
-//
-//   s.Delete("golang-tests")
-// }
 //
 // func TestUpdateDocuments(t *testing.T) {
 //   db, _ := s.Create("golang-tests")
