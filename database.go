@@ -3,11 +3,13 @@ package couchdb
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -123,9 +125,9 @@ func (d *Database) Save(doc map[string]interface{}, options url.Values) (string,
 }
 
 // Get returns the document with the specified ID.
-func (d *Database) Get(docid string) (map[string]interface{}, error) {
+func (d *Database) Get(docid string, options url.Values) (map[string]interface{}, error) {
 	docRes := docResource(d.resource, docid)
-	_, data, err := docRes.GetJSON("", nil, nil)
+	_, data, err := docRes.GetJSON("", nil, options)
 	if err != nil {
 		return nil, err
 	}
@@ -145,13 +147,28 @@ func (d *Database) Delete(docid string) error {
 		return err
 	}
 	rev := strings.Trim(header.Get("ETag"), `"`)
-	params := url.Values{}
-	params.Set("rev", rev)
-	_, _, err = docRes.DeleteJSON("", nil, params)
-	if err != nil {
-		return err
+	return deleteDoc(docRes, rev)
+}
+
+// DeleteDoc deletes the specified document
+func (d *Database) DeleteDoc(doc map[string]interface{}) error {
+	id, ok := doc["_id"]
+	if !ok || id == nil {
+		return errors.New("document ID not existed")
 	}
-	return nil
+
+	rev, ok := doc["_rev"]
+	if !ok || rev == nil {
+		return errors.New("document rev not existed")
+	}
+
+	docRes := docResource(d.resource, id.(string))
+	return deleteDoc(docRes, rev.(string))
+}
+
+func deleteDoc(docRes *Resource, rev string) error {
+	_, _, err := docRes.DeleteJSON("", nil, url.Values{"rev": []string{rev}})
+	return err
 }
 
 // Set creates or updates a document with the specified ID.
@@ -237,14 +254,15 @@ func (d *Database) DocIDs() []string {
 // Name returns the name of database.
 func (d *Database) Name() (string, error) {
 	var name string
-	info, err := d.databaseInfo()
+	info, err := d.Info()
 	if err != nil {
 		return name, err
 	}
 	return info["db_name"].(string), nil
 }
 
-func (d *Database) databaseInfo() (map[string]interface{}, error) {
+// Info returns the information about the database
+func (d *Database) Info() (map[string]interface{}, error) {
 	_, data, err := d.resource.GetJSON("", nil, url.Values{})
 
 	if err != nil {
@@ -273,11 +291,50 @@ func (d *Database) Commit() error {
 	return err
 }
 
+// Compact compacts the database by compressing the disk database file.
+func (d *Database) Compact() error {
+	_, _, err := d.resource.PostJSON("_compact", nil, nil, nil)
+	return err
+}
+
+// Revisions returns all available revisions of the given document in reverse
+// order, e.g. latest first.
+func (d *Database) Revisions(docid string, options url.Values) ([]map[string]interface{}, error) {
+	docRes := docResource(d.resource, docid)
+	_, data, err := docRes.GetJSON("", nil, url.Values{"revs": []string{"true"}})
+	if err != nil {
+		return nil, err
+	}
+	var jsonMap map[string]*json.RawMessage
+	err = json.Unmarshal(*data, &jsonMap)
+	if err != nil {
+		return nil, err
+	}
+	var revsMap map[string]interface{}
+	err = json.Unmarshal(*jsonMap["_revisions"], &revsMap)
+	startRev := int(revsMap["start"].(float64))
+	val := reflect.ValueOf(revsMap["ids"])
+	if options == nil {
+		options = url.Values{}
+	}
+	docs := make([]map[string]interface{}, val.Len())
+	for i := 0; i < val.Len(); i++ {
+		rev := fmt.Sprintf("%d-%s", startRev-i, val.Index(i).Interface().(string))
+		options.Set("rev", rev)
+		doc, err := d.Get(docid, options)
+		if err != nil {
+			return nil, err
+		}
+		docs[i] = doc
+	}
+	return docs, nil
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
 func (d *Database) Len() (int, error) {
-	info, err := d.databaseInfo()
+	info, err := d.Info()
 	if err != nil {
 		return 0, err
 	}
@@ -447,12 +504,6 @@ func (d *Database) Cleanup() bool {
 	return err == nil
 }
 
-// Compact compacts the database by compressing the disk database file.
-func (d *Database) Compact() bool {
-	_, _, err := d.resource.PostJSON("_compact", nil, nil, nil)
-	return err == nil
-}
-
 // Copy copies an existing document to a new or existing document.
 func (d *Database) Copy(srcID, destID string) (string, bool) {
 	docRes := docResource(d.resource, srcID)
@@ -489,7 +540,3 @@ func (d *Database) GetSecurity() (map[string]interface{}, bool) {
 	}
 	return secDoc, err == nil
 }
-
-// GetRevisions returns all available revisions of the given document in reverse
-// order, e.g. latest first.TODO
-func (d *Database) GetRevisions() {}

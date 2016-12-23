@@ -229,7 +229,7 @@ func TestReplicate(t *testing.T) {
 	if v, ok := result["ok"]; !(ok && v.(bool)) {
 		t.Error(`result should be ok`)
 	}
-	doc, err := dbb.Get(id)
+	doc, err := dbb.Get(id, nil)
 	if err != nil {
 		t.Errorf("db %s get doc %s error %v", bName, id, err)
 	}
@@ -249,7 +249,7 @@ func TestReplicate(t *testing.T) {
 		t.Error(`server replicate return non-map result`)
 	}
 
-	docA, err := dba.Get(id)
+	docA, err := dba.Get(id, nil)
 	if err != nil {
 		t.Errorf("db %s get doc %s error %v", aName, id, err)
 	}
@@ -259,7 +259,7 @@ func TestReplicate(t *testing.T) {
 		}
 	}
 
-	docB, err := dbb.Get(id)
+	docB, err := dbb.Get(id, nil)
 	if err != nil {
 		t.Errorf("db %s get doc %s error %v", bName, id, err)
 	}

@@ -2,6 +2,7 @@ package couchdb
 
 import (
 	"bytes"
+	"math"
 	"net/url"
 	"testing"
 )
@@ -183,12 +184,16 @@ func TestCreateLargeDoc(t *testing.T) {
 	if err := db.Set("foo", doc); err != nil {
 		t.Error(`db set error`, err)
 	}
-	doc, err := db.Get("foo")
+	doc, err := db.Get("foo", nil)
 	if err != nil {
 		t.Error(`db get error`, err)
 	}
 	if doc["_id"].(string) != "foo" {
 		t.Errorf("doc[_id] = %s, want foo", doc["_id"].(string))
+	}
+	err = db.DeleteDoc(doc)
+	if err != nil {
+		t.Error(`db delete doc error`, err)
 	}
 }
 
@@ -200,7 +205,7 @@ func TestDocIDQuoting(t *testing.T) {
 	if err != nil {
 		t.Error(`db set error`, err)
 	}
-	doc, err = db.Get("foo/bar")
+	doc, err = db.Get("foo/bar", nil)
 	if err != nil {
 		t.Error(`db get error`, err)
 	}
@@ -211,16 +216,103 @@ func TestDocIDQuoting(t *testing.T) {
 	if err != nil {
 		t.Error(`db delete error`, err)
 	}
-	_, err = db.Get("foo/bar")
+	_, err = db.Get("foo/bar", nil)
 	if err == nil {
 		t.Error(`db get foo/bar ok`)
 	}
 }
 
-func TestDisallowNaN(t *testing.T)   {}
-func TestDisallowNilID(t *testing.T) {}
+func TestDisallowNaN(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	doc := map[string]interface{}{"number": math.NaN()}
+	err := db.Set("foo", doc)
+	if err == nil {
+		t.Error(`db set NaN ok`)
+	}
+}
 
-// func TestDocRevs() {}
+func TestDisallowNilID(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+	err := db.DeleteDoc(map[string]interface{}{"_id": nil, "_rev": nil})
+	if err == nil {
+		t.Error(`db delete doc with id nil ok`)
+	}
+	err = db.DeleteDoc(map[string]interface{}{"_id": "foo", "_rev": nil})
+	if err == nil {
+		t.Error(`db delete doc with rev nil ok`)
+	}
+}
+
+func TestDocRevs(t *testing.T) {
+	db, _ := s.Create("golang-tests")
+	defer s.Delete("golang-tests")
+
+	doc := map[string]interface{}{"bar": 42}
+	err := db.Set("foo", doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	oldRev := doc["_rev"].(string)
+	doc["bar"] = 43
+	err = db.Set("foo", doc)
+	if err != nil {
+		t.Error(`db set doc error`, err)
+	}
+	newRev := doc["_rev"].(string)
+
+	newDoc, err := db.Get("foo", nil)
+	if newRev != newDoc["_rev"].(string) {
+		t.Errorf("new doc rev %s not equal to %s", newDoc["_rev"].(string), newRev)
+	}
+	newDoc, err = db.Get("foo", url.Values{"rev": []string{newRev}})
+	if newRev != newDoc["_rev"].(string) {
+		t.Errorf("new doc rev %s not equal to %s", newDoc["_rev"].(string), newRev)
+	}
+	oldDoc, err := db.Get("foo", url.Values{"rev": []string{oldRev}})
+	if oldRev != oldDoc["_rev"].(string) {
+		t.Errorf("old doc rev %s not equal to %s", oldDoc["_rev"].(string), oldRev)
+	}
+
+	revs, err := db.Revisions("foo", nil)
+	if err != nil {
+		t.Error(`db revisions error`, err)
+	}
+	if revs[0]["_rev"].(string) != newRev {
+		t.Errorf("revs first %s not equal to %s", revs[0]["_rev"].(string), newRev)
+	}
+	if revs[1]["_rev"].(string) != oldRev {
+		t.Errorf("revs second %s not equal to %s", revs[1]["_rev"].(string), oldRev)
+	}
+	_, err = db.Revisions("crap", nil)
+	if err == nil {
+		t.Error(`db revisions crap ok`)
+	}
+
+	err = db.Compact()
+	if err != nil {
+		t.Error("db compact error", err)
+	}
+
+	info, err := db.Info()
+	if err != nil {
+		t.Error(`db info error`, err)
+	}
+	for info["compact_running"].(bool) {
+		info, err = db.Info()
+		if err != nil {
+			t.Error(`db info error`, err)
+		}
+	}
+
+	doc, err = db.Get("foo", url.Values{"rev": []string{oldRev}})
+	if err == nil {
+		t.Errorf("db get compacted doc ok, rev = %s", oldRev)
+	}
+
+}
+
 // func TestAttachmentCRUD() {}
 // func TestAttachmentCRUDWithFiles() {}
 // func TestAttachmentFromFS() {}
