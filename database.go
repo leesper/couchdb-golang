@@ -257,29 +257,29 @@ func (d *Database) Update(docs []map[string]interface{}, options map[string]inte
 }
 
 // DocIDs returns the IDs of all documents in database.
-func (d *Database) DocIDs() []string {
+func (d *Database) DocIDs() ([]string, error) {
 	docRes := docResource(d.resource, "_all_docs")
 	_, data, err := docRes.GetJSON("", nil, nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var jsonMap map[string]*json.RawMessage
-	json.Unmarshal(data, &jsonMap)
-	if _, ok := jsonMap["rows"]; !ok {
-		return nil
+	err = json.Unmarshal(data, &jsonMap)
+	if err != nil {
+		return nil, err
 	}
 	var jsonArr []*json.RawMessage
 	json.Unmarshal(*jsonMap["rows"], &jsonArr)
-	if len(jsonArr) == 0 {
-		return nil
-	}
 	ids := make([]string, len(jsonArr))
 	for i, v := range jsonArr {
 		var row map[string]interface{}
-		json.Unmarshal(*v, &row)
+		err = json.Unmarshal(*v, &row)
+		if err != nil {
+			return ids, err
+		}
 		ids[i] = row["id"].(string)
 	}
-	return ids
+	return ids, nil
 }
 
 // Name returns the name of database.
@@ -542,8 +542,6 @@ func (d *Database) GetSecurity() (map[string]interface{}, error) {
 	return parseData(data)
 }
 
-///////////////////////////////////////////////////////
-
 // Len returns the number of documents stored in it.
 func (d *Database) Len() (int, error) {
 	info, err := d.Info()
@@ -552,6 +550,8 @@ func (d *Database) Len() (int, error) {
 	}
 	return int(info["doc_count"].(float64)), nil
 }
+
+///////////////////////////////////////////////////////
 
 // docResource returns a Resource instance for docID
 func docResource(res *Resource, docID string) *Resource {

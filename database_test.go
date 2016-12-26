@@ -683,107 +683,68 @@ func TestSecurity(t *testing.T) {
 	}
 }
 
-//
-//
-//
-//
-//
-// func TestDatabaseSave(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "John Doe",
-//   }
-//   id, rev := db.Save(doc)
-//   if len(id) == 0 || len(rev) == 0 {
-//     t.Error(`should return non-empty id and rev`)
-//   }
-//
-//   doc["name"] = "Jason Statham"
-//   id, rev = db.Save(doc)
-//   if len(id) == 0 || len(rev) == 0 {
-//     t.Error(`should return non-empty id and rev`)
-//   }
-//
-//   doc["type"] = "Movie Star"
-//   id, rev = db.Save(doc)
-//   if len(id) == 0 || len(rev) == 0 {
-//     t.Error(`should return non-empty id and rev`)
-//   }
-//
-//   s.Delete("golang-tests")
-// }
-//
-// func TestDatabaseAvailable(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   if !db.Available() {
-//     t.Error(`database should be available`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-// func TestDatabaseContains(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "Jason Statham",
-//   }
-//   id, _ := db.Save(doc)
-//   if len(id) <= 0 {
-//     t.Error(`should return non-empty id`)
-//   }
-//   if !db.Contains(id) {
-//     t.Error(`should contain id ` + id)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-// func TestDatabaseSetGetDelete(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "Jason Statham",
-//   }
-//   if !db.Set("Mechanic", doc) {
-//     t.Error(`set should return true`)
-//   }
-//   fetched := db.Get("Mechanic")
-//   if fetched == nil {
-//     t.Error(`get should return non-nil`)
-//   }
-//   if !db.Delete("Mechanic") {
-//     t.Error(`delete should return true`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-// func TestDatabaseDocIDsAndLen(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "Jason Statham",
-//   }
-//
-//   if !db.Set("Mechanic", doc) {
-//     t.Error(`set should return true`)
-//   }
-//
-//   ids := db.DocIDs()
-//   if ids == nil {
-//     t.Error(`should return slice of string`)
-//   }
-//
-//   if len(ids) != 1 {
-//     t.Error(`should return 1`)
-//   }
-//
-//   if db.Len() != 1 {
-//     t.Error(`Len() should return 1`)
-//   }
-//
-//   s.Delete("golang-tests")
-// }
-//
+func TestDBContains(t *testing.T) {
+	doc := map[string]interface{}{
+		"type": "Person",
+		"name": "Jason Statham",
+	}
+	id, _, err := db.Save(doc, nil)
+	if err != nil {
+		t.Error(`db save error`, err)
+	}
+	if err = db.Contains(id); err != nil {
+		t.Error(`db contains error`, err)
+	}
+}
+
+func TestDBSetGetDelete(t *testing.T) {
+	doc := map[string]interface{}{
+		"type": "Person",
+		"name": "Jason Statham",
+	}
+	err := db.Set("Mechanic", doc)
+	if err != nil {
+		t.Error(`db set error`, err)
+	}
+	_, err = db.Get("Mechanic", nil)
+	if err != nil {
+		t.Error(`db get error`, err)
+	}
+	err = db.Delete("Mechanic")
+	if err != nil {
+		t.Error(`db delete error`, err)
+	}
+}
+
+func TestDBDocIDsAndLen(t *testing.T) {
+	doc := map[string]interface{}{
+		"type": "Person",
+		"name": "Jason Statham",
+	}
+
+	err := db.Set("Mechanic", doc)
+	if err != nil {
+		t.Error(`db set error`, err)
+	}
+
+	ids, err := db.DocIDs()
+	if err != nil {
+		t.Error(`db doc ids error`, err)
+	}
+
+	if len(ids) != 1 {
+		t.Error(`should return 1`)
+	}
+
+	length, err := db.Len()
+	if err != nil {
+		t.Error(`db len error`, err)
+	}
+	if length < 1 {
+		t.Errorf("Len() returns %d want >= 1", length)
+	}
+}
+
 // func TestDatabaseCommit(t *testing.T) {
 //   db, _ := s.Create("golang-tests")
 //   if !db.Commit() {
