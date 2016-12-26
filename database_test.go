@@ -638,9 +638,16 @@ func TestCopyDocOverwrite(t *testing.T) {
 	}
 }
 
-// func TestChanges() {}
-// func TestChangesConnUsable() {}
-// func TestChangesHeartbeat() {}
+func TestChanges(t *testing.T) {
+	options := url.Values{
+		"style": []string{"all_docs"},
+	}
+	_, err := db.Changes(options)
+	if err != nil {
+		t.Error(`db change error`, err)
+	}
+}
+
 // func TestPurge() {}
 // func TestSecurity() {}
 //
@@ -826,21 +833,7 @@ func TestCopyDocOverwrite(t *testing.T) {
 //   s.Delete("golang-tests")
 // }
 //
-// func TestChanges(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   options := url.Values{
-//     "style": []string{"all_docs"},
-//   }
-//   changes, ok := db.Changes(options)
-//   if !ok {
-//     t.Error(`changes should return true`)
-//   }
-//   if changes == nil {
-//     t.Error(`changes should be non-nil`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
+
 // func TestCleanup(t *testing.T) {
 //   db, _ := s.Create("golang-tests")
 //   ok := db.Cleanup()

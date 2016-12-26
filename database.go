@@ -472,6 +472,17 @@ func (d *Database) Copy(srcID, destID, destRev string) (string, error) {
 	return rev, err
 }
 
+// Changes returns a sorted list of changes feed made to documents in the database.
+func (d *Database) Changes(options url.Values) (map[string]interface{}, error) {
+	_, data, err := d.resource.GetJSON("_changes", nil, options)
+	if err != nil {
+		return nil, err
+	}
+	var changes map[string]interface{}
+	err = json.Unmarshal(*data, &changes)
+	return changes, err
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
@@ -533,17 +544,6 @@ func (d *Database) GetRevsLimit() (int, error) {
 func (d *Database) SetRevsLimit(limit int) bool {
 	_, _, err := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
 	return err == nil
-}
-
-// Changes returns a sorted list of changes feed made to documents in the database.
-func (d *Database) Changes(options url.Values) (map[string]interface{}, bool) {
-	_, data, err := d.resource.GetJSON("_changes", nil, options)
-	if err != nil {
-		return nil, false
-	}
-	var changes map[string]interface{}
-	json.Unmarshal(*data, &changes)
-	return changes, err == nil
 }
 
 // Cleanup removes all view index files no longer required by CouchDB.
