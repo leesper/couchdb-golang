@@ -574,9 +574,6 @@ func TestJSONAttachment(t *testing.T) {
 	}
 }
 
-// func TestIncludeDocs() {}
-// // TODO adding new apis about mango query engine
-// func TestQueryMultiGet() {}
 func TestBulkUpdateConflict(t *testing.T) {
 	docs := []map[string]interface{}{
 		{
@@ -732,136 +729,34 @@ func TestDBDocIDsAndLen(t *testing.T) {
 		t.Error(`db doc ids error`, err)
 	}
 
-	if len(ids) != 1 {
-		t.Error(`should return 1`)
-	}
-
 	length, err := db.Len()
 	if err != nil {
 		t.Error(`db len error`, err)
 	}
-	if length < 1 {
-		t.Errorf("Len() returns %d want >= 1", length)
+	if length != len(ids) {
+		t.Errorf("Len() returns %d want %d", length, len(ids))
 	}
 }
 
-// func TestDatabaseCommit(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   if !db.Commit() {
-//     t.Error(`commit should be true`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-//
-// func TestUpdateDocuments(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   docs := []map[string]interface{}{
-//     {
-//       "type": "Person",
-//       "name": "Jason Statham",
-//     },
-//     {
-//       "type": "Person",
-//       "name": "Sylvester Stallone",
-//     },
-//     {
-//       "type": "Person",
-//       "name": "Arnold Schwarzenegger",
-//     },
-//     {
-//       "type": "Person",
-//       "name": "Sam Worthington",
-//     },
-//   }
-//
-//   idRevs, ok := db.UpdateDocuments(docs, nil)
-//
-//   if !ok {
-//     t.Error(`update documents should return true`)
-//   }
-//
-//   if len(idRevs) != len(docs) {
-//     t.Error(`update documents should return id and revs in`, len(docs))
-//   }
-//
-//   s.Delete("golang-tests")
-// }
-//
-// func TestUserManagement(t *testing.T) {
-//   id, rev := s.AddUser("foo", "secret", []string{"hero"})
-//   if len(id) == 0 || len(rev) == 0 {
-//     t.Error(`add user should return non-empty id and rev`)
-//   }
-//
-//   token, ok := s.Login("foo", "secret")
-//   if !ok {
-//     t.Error(`login should return true`)
-//   }
-//
-//   if !s.VerifyToken(token) {
-//     t.Error(`token should be valid`, token)
-//   }
-//
-//   if !s.Logout(token) {
-//     t.Error(`logout should return true`)
-//   }
-//
-//   if !s.RemoveUser("foo") {
-//     t.Error(`remove user should return true`)
-//   }
-// }
-//
-// func TestGetSetRevsLimit(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   if !db.SetRevsLimit(10) {
-//     t.Error(`set revs limit should return true`)
-//   }
-//   limit, ok := db.GetRevsLimit()
-//   if !ok {
-//     t.Error(`get revs limit should return true`)
-//   }
-//   if limit != 10 {
-//     t.Error(`limit should be 10`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
+func TestGetSetRevsLimit(t *testing.T) {
+	err := db.SetRevsLimit(10)
+	if err != nil {
+		t.Error(`db set revs limit error`, err)
+	}
+	limit, err := db.GetRevsLimit()
+	if err != nil {
+		t.Error(`db get revs limit error`, err)
+	}
+	if limit != 10 {
+		t.Error(`limit should be 10`)
+	}
+}
 
-// func TestCleanup(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   ok := db.Cleanup()
-//   if !ok {
-//     t.Error(`cleanup should return true`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-// func TestCompact(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   ok := db.Compact()
-//   if !ok {
-//     t.Error(`compact should return true`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
-// func TestCopy(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   doc := map[string]interface{}{
-//     "type": "Person",
-//     "name": "Jason Statham",
-//   }
-//   src, _ := db.Save(doc)
-//   dst := GenerateUUID()
-//   _, ok := db.Copy(src, dst)
-//   if !ok {
-//     t.Error(`compact should return true`)
-//   }
-//   dstDoc := db.Get(dst)
-//   if dstDoc == nil {
-//     t.Error(`dstDoc should be non-nil`)
-//   }
-//   s.Delete("golang-tests")
-// }
-//
+func TestCleanup(t *testing.T) {
+	err := db.Cleanup()
+	if err != nil {
+		t.Error(`db clean up error`, err)
+	}
+}
+
+// TODO adding new apis about mango query engine

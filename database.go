@@ -551,6 +551,26 @@ func (d *Database) Len() (int, error) {
 	return int(info["doc_count"].(float64)), nil
 }
 
+// GetRevsLimit gets the current revs_limit(revision limit) setting.
+func (d *Database) GetRevsLimit() (int, error) {
+	_, data, err := d.resource.Get("_revs_limit", nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	limit, err := strconv.Atoi(strings.Trim(string(data), "\n"))
+	if err != nil {
+		return limit, err
+	}
+	return limit, nil
+}
+
+// SetRevsLimit sets the maximum number of document revisions that will be
+// tracked by CouchDB.
+func (d *Database) SetRevsLimit(limit int) error {
+	_, _, err := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
+	return err
+}
+
 ///////////////////////////////////////////////////////
 
 // docResource returns a Resource instance for docID
@@ -572,29 +592,8 @@ func docResource(res *Resource, docID string) *Resource {
 	return docRes
 }
 
-// GetRevsLimit gets the current revs_limit(revision limit) setting.
-func (d *Database) GetRevsLimit() (int, error) {
-	limit := -1
-	_, data, err := d.resource.Get("_revs_limit", nil, nil)
-	if err != nil {
-		return limit, err
-	}
-	limit, err = strconv.Atoi(strings.Trim(string(data), "\n"))
-	if err != nil {
-		return limit, err
-	}
-	return limit, nil
-}
-
-// SetRevsLimit sets the maximum number of document revisions that will be
-// tracked by CouchDB.
-func (d *Database) SetRevsLimit(limit int) bool {
-	_, _, err := d.resource.Put("_revs_limit", nil, []byte(strconv.Itoa(limit)), nil)
-	return err == nil
-}
-
 // Cleanup removes all view index files no longer required by CouchDB.
-func (d *Database) Cleanup() bool {
+func (d *Database) Cleanup() error {
 	_, _, err := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
-	return err == nil
+	return err
 }
