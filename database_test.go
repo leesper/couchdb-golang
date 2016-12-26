@@ -667,7 +667,22 @@ func TestPurge(t *testing.T) {
 	*/
 }
 
-// func TestSecurity() {}
+func TestSecurity(t *testing.T) {
+	secDoc, err := db.GetSecurity()
+	if err != nil {
+		t.Error(`get security should return true`)
+	}
+	if len(secDoc) > 0 {
+		t.Error(`secDoc should be empty`)
+	}
+	if db.SetSecurity(map[string]interface{}{
+		"names": []string{"test"},
+		"roles": []string{},
+	}) != nil {
+		t.Error(`set security should return true`)
+	}
+}
+
 //
 //
 //
@@ -889,27 +904,3 @@ func TestPurge(t *testing.T) {
 //   s.Delete("golang-tests")
 // }
 //
-// func TestPurge(t *testing.T) {
-//   // db, _ := s.Create("golang-tests")
-//
-//   //TODO
-//   // s.Delete("golang-tests")
-// }
-//
-// func TestSecurity(t *testing.T) {
-//   db, _ := s.Create("golang-tests")
-//   secDoc, ok := db.GetSecurity()
-//   if !ok {
-//     t.Error(`get security should return true`)
-//   }
-//   if len(secDoc) > 0 {
-//     t.Error(`secDoc should be empty`)
-//   }
-//   if !db.SetSecurity(map[string]interface{}{
-//     "names": []string{"test"},
-//     "roles": []string{},
-//   }) {
-//     t.Error(`set security should return true`)
-//   }
-//   s.Delete("golang-tests")
-// }

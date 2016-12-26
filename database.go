@@ -517,6 +517,31 @@ func parseData(data []byte) (map[string]interface{}, error) {
 	return result, nil
 }
 
+// GenerateUUID returns a random 128-bit UUID
+func GenerateUUID() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+
+	uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	return uuid
+}
+
+func (d *Database) SetSecurity(securityDoc map[string]interface{}) error {
+	_, _, err := d.resource.PutJSON("_security", nil, securityDoc, nil)
+	return err
+}
+
+func (d *Database) GetSecurity() (map[string]interface{}, error) {
+	_, data, err := d.resource.GetJSON("_security", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return parseData(data)
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
@@ -547,18 +572,6 @@ func docResource(res *Resource, docID string) *Resource {
 	return docRes
 }
 
-// GenerateUUID returns a random 128-bit UUID
-func GenerateUUID() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		return ""
-	}
-
-	uuid := fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-	return uuid
-}
-
 // GetRevsLimit gets the current revs_limit(revision limit) setting.
 func (d *Database) GetRevsLimit() (int, error) {
 	limit := -1
@@ -584,18 +597,4 @@ func (d *Database) SetRevsLimit(limit int) bool {
 func (d *Database) Cleanup() bool {
 	_, _, err := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
 	return err == nil
-}
-
-func (d *Database) SetSecurity(securityDoc map[string]interface{}) bool {
-	_, _, err := d.resource.PutJSON("_security", nil, securityDoc, nil)
-	return err == nil
-}
-
-func (d *Database) GetSecurity() (map[string]interface{}, bool) {
-	_, data, err := d.resource.GetJSON("_security", nil, nil)
-	var secDoc map[string]interface{}
-	if err == nil {
-		json.Unmarshal(data, &secDoc)
-	}
-	return secDoc, err == nil
 }
