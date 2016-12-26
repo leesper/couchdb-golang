@@ -609,11 +609,8 @@ func TestBulkUpdateConflict(t *testing.T) {
 	if results[0].err != ErrConflict {
 		t.Errorf("db update conflict err %v want ErrConflict", results[0].err)
 	}
-
 }
 
-// func TestBulkUpdateAllOrNothing() {}
-// func TestBulkUpdateBadDoc() {}
 // func TestCopyDocConflict() {}
 // func TestCopyDocOverwrite() {}
 // func TestCopyDocSrcObj() {}

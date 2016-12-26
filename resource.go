@@ -206,15 +206,8 @@ func (r *Resource) PutJSON(path string, header http.Header, body map[string]inte
 // helper function to make real request
 func requestJSON(method string, u *url.URL, header http.Header, body io.Reader, params url.Values) (http.Header, *json.RawMessage, error) {
 	hdr, data, err := request(method, u, header, body, params)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	var jsonData json.RawMessage
-	err = json.Unmarshal(data, &jsonData)
-	if err != nil {
-		return nil, nil, err
-	}
+	json.Unmarshal(data, &jsonData)
 	return hdr, &jsonData, err
 }
 
