@@ -48,7 +48,7 @@ func (s *Server) Config(node string) (map[string]map[string]string, error) {
 		return nil, err
 	}
 	var config map[string]map[string]string
-	err = json.Unmarshal(*data, &config)
+	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (s *Server) Version() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = json.Unmarshal(*data, &jsonMap)
+	err = json.Unmarshal(data, &jsonMap)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +82,7 @@ func (s *Server) ActiveTasks() ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(*data, &tasks)
+	err = json.Unmarshal(data, &tasks)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (s *Server) DBs() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(*data, &dbs)
+	err = json.Unmarshal(data, &dbs)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *Server) Stats(node, entry string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(*data, &stats)
+	err = json.Unmarshal(data, &stats)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (s *Server) Membership() ([]string, []string, error) {
 		return nil, nil, err
 	}
 
-	err = json.Unmarshal(*data, &jsonMap)
+	err = json.Unmarshal(data, &jsonMap)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,7 +225,7 @@ func (s *Server) Replicate(source, target string, options map[string]interface{}
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal(*data, &result)
+	json.Unmarshal(data, &result)
 
 	return result, nil
 }
@@ -241,13 +241,13 @@ func (s *Server) UUIDs(count int) ([]string, error) {
 	values := url.Values{}
 	values.Set("count", strconv.Itoa(count))
 
-	_, jsonData, err := s.resource.GetJSON("_uuids", nil, values)
+	_, data, err := s.resource.GetJSON("_uuids", nil, values)
 	if err != nil {
 		return nil, err
 	}
 
 	var jsonMap map[string]*json.RawMessage
-	err = json.Unmarshal(*jsonData, &jsonMap)
+	err = json.Unmarshal(data, &jsonMap)
 	if err != nil {
 		return nil, err
 	}

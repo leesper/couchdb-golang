@@ -648,7 +648,25 @@ func TestChanges(t *testing.T) {
 	}
 }
 
-// func TestPurge() {}
+// FIXME: Purge not implemented in CouchDB 2.0.0 yet.
+func TestPurge(t *testing.T) {
+	doc := map[string]interface{}{"a": "b"}
+	err := db.Set("purge", doc)
+	if err != nil {
+		t.Error(`db set error`, err)
+	}
+	_, err = db.Purge([]map[string]interface{}{doc})
+	if err == nil {
+		t.Error(`db purge ok`, err)
+	}
+	/*
+		purgeSeq := int(result["purge_seq"].(float64))
+		if purgeSeq != 1 {
+			t.Errorf("db purge seq=%d want 1", purgeSeq)
+		}
+	*/
+}
+
 // func TestSecurity() {}
 //
 //

@@ -92,7 +92,7 @@ func (d *Database) Available() bool {
 func (d *Database) Save(doc map[string]interface{}, options url.Values) (string, string, error) {
 	var id, rev string
 
-	var httpFunc func(string, http.Header, map[string]interface{}, url.Values) (http.Header, *json.RawMessage, error)
+	var httpFunc func(string, http.Header, map[string]interface{}, url.Values) (http.Header, []byte, error)
 	if v, ok := doc["_id"]; ok {
 		httpFunc = docResource(d.resource, v.(string)).PutJSON
 	} else {
@@ -105,7 +105,7 @@ func (d *Database) Save(doc map[string]interface{}, options url.Values) (string,
 	}
 
 	var jsonMap map[string]interface{}
-	err = json.Unmarshal(*data, &jsonMap)
+	jsonMap, err = parseData(data)
 	if err != nil {
 		return id, rev, err
 	}
@@ -131,7 +131,7 @@ func (d *Database) Get(docid string, options url.Values) (map[string]interface{}
 		return nil, err
 	}
 	var doc map[string]interface{}
-	err = json.Unmarshal(*data, &doc)
+	doc, err = parseData(data)
 	if err != nil {
 		return nil, err
 	}
@@ -178,13 +178,13 @@ func (d *Database) Set(docid string, doc map[string]interface{}) error {
 		return err
 	}
 
-	var jsonMap map[string]interface{}
-	err = json.Unmarshal(*data, &jsonMap)
+	result, err := parseData(data)
 	if err != nil {
 		return err
 	}
-	doc["_id"] = jsonMap["id"].(string)
-	doc["_rev"] = jsonMap["rev"].(string)
+
+	doc["_id"] = result["id"].(string)
+	doc["_rev"] = result["rev"].(string)
 	return nil
 }
 
@@ -217,7 +217,7 @@ func (d *Database) Update(docs []map[string]interface{}, options map[string]inte
 		return nil, err
 	}
 	var jsonArr []map[string]interface{}
-	err = json.Unmarshal(*data, &jsonArr)
+	err = json.Unmarshal(data, &jsonArr)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (d *Database) DocIDs() []string {
 		return nil
 	}
 	var jsonMap map[string]*json.RawMessage
-	json.Unmarshal(*data, &jsonMap)
+	json.Unmarshal(data, &jsonMap)
 	if _, ok := jsonMap["rows"]; !ok {
 		return nil
 	}
@@ -301,7 +301,7 @@ func (d *Database) Info() (map[string]interface{}, error) {
 	}
 
 	var info map[string]interface{}
-	err = json.Unmarshal(*data, &info)
+	err = json.Unmarshal(data, &info)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +337,7 @@ func (d *Database) Revisions(docid string, options url.Values) ([]map[string]int
 		return nil, err
 	}
 	var jsonMap map[string]*json.RawMessage
-	err = json.Unmarshal(*data, &jsonMap)
+	err = json.Unmarshal(data, &jsonMap)
 	if err != nil {
 		return nil, err
 	}
@@ -409,14 +409,12 @@ func (d *Database) PutAttachment(doc map[string]interface{}, content []byte, nam
 		return err
 	}
 
-	var jsonMap map[string]interface{}
-	err = json.Unmarshal(data, &jsonMap)
+	result, err := parseData(data)
 	if err != nil {
 		return err
 	}
 
-	doc["_rev"] = jsonMap["rev"].(string)
-
+	doc["_rev"] = result["rev"].(string)
 	return nil
 }
 
@@ -439,12 +437,11 @@ func (d *Database) DeleteAttachment(doc map[string]interface{}, name string) err
 		return err
 	}
 
-	var jsonMap map[string]interface{}
-	err = json.Unmarshal(*data, &jsonMap)
+	result, err := parseData(data)
 	if err != nil {
 		return err
 	}
-	doc["_rev"] = jsonMap["rev"]
+	doc["_rev"] = result["rev"]
 
 	return nil
 }
@@ -466,10 +463,12 @@ func (d *Database) Copy(srcID, destID, destRev string) (string, error) {
 	if err != nil {
 		return rev, err
 	}
-	var jsonMap map[string]interface{}
-	json.Unmarshal(data, &jsonMap)
-	rev = jsonMap["rev"].(string)
-	return rev, err
+	result, err := parseData(data)
+	if err != nil {
+		return rev, err
+	}
+	rev = result["rev"].(string)
+	return rev, nil
 }
 
 // Changes returns a sorted list of changes feed made to documents in the database.
@@ -478,9 +477,44 @@ func (d *Database) Changes(options url.Values) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var changes map[string]interface{}
-	err = json.Unmarshal(*data, &changes)
-	return changes, err
+	result, err := parseData(data)
+	return result, err
+}
+
+// Purge performs complete removing of the given documents.
+func (d *Database) Purge(docs []map[string]interface{}) (map[string]interface{}, error) {
+	revs := map[string][]string{}
+	for _, doc := range docs {
+		id, rev := doc["_id"].(string), doc["_rev"].(string)
+		if _, ok := revs[id]; !ok {
+			revs[id] = []string{}
+		}
+		revs[id] = append(revs[id], rev)
+	}
+
+	body := map[string]interface{}{}
+	for k, v := range revs {
+		body[k] = v
+	}
+	_, data, err := d.resource.PostJSON("_purge", nil, body, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseData(data)
+}
+
+func parseData(data []byte) (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, err
+	}
+	if _, ok := result["error"]; ok {
+		reason := result["reason"].(string)
+		return result, errors.New(reason)
+	}
+	return result, nil
 }
 
 ///////////////////////////////////////////////////////
@@ -552,12 +586,6 @@ func (d *Database) Cleanup() bool {
 	return err == nil
 }
 
-// Purge performs complete removing of the given documents.
-func (d *Database) Purge(docIDs []string) bool {
-	// TODO
-	return false
-}
-
 func (d *Database) SetSecurity(securityDoc map[string]interface{}) bool {
 	_, _, err := d.resource.PutJSON("_security", nil, securityDoc, nil)
 	return err == nil
@@ -567,7 +595,7 @@ func (d *Database) GetSecurity() (map[string]interface{}, bool) {
 	_, data, err := d.resource.GetJSON("_security", nil, nil)
 	var secDoc map[string]interface{}
 	if err == nil {
-		json.Unmarshal(*data, &secDoc)
+		json.Unmarshal(data, &secDoc)
 	}
 	return secDoc, err == nil
 }

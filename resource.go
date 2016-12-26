@@ -155,16 +155,16 @@ func (r *Resource) Put(path string, header http.Header, body []byte, params url.
 }
 
 // GetJSON issues a GET to the specified URL, with data returned as json
-func (r *Resource) GetJSON(path string, header http.Header, params url.Values) (http.Header, *json.RawMessage, error) {
+func (r *Resource) GetJSON(path string, header http.Header, params url.Values) (http.Header, []byte, error) {
 	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
-	return requestJSON(http.MethodGet, u, header, nil, params)
+	return request(http.MethodGet, u, header, nil, params)
 }
 
 // PostJSON issues a POST to the specified URL, with data returned as json
-func (r *Resource) PostJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, *json.RawMessage, error) {
+func (r *Resource) PostJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, []byte, error) {
 	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
@@ -175,21 +175,21 @@ func (r *Resource) PostJSON(path string, header http.Header, body map[string]int
 		return nil, nil, err
 	}
 
-	return requestJSON(http.MethodPost, u, header, bytes.NewReader(jsonBody), params)
+	return request(http.MethodPost, u, header, bytes.NewReader(jsonBody), params)
 }
 
 // DeleteJSON issues a DELETE to the specified URL, with data returned as json
-func (r *Resource) DeleteJSON(path string, header http.Header, params url.Values) (http.Header, *json.RawMessage, error) {
+func (r *Resource) DeleteJSON(path string, header http.Header, params url.Values) (http.Header, []byte, error) {
 	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return requestJSON(http.MethodDelete, u, header, nil, params)
+	return request(http.MethodDelete, u, header, nil, params)
 }
 
 // PutJSON issues a PUT to the specified URL, with data returned as json
-func (r *Resource) PutJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, *json.RawMessage, error) {
+func (r *Resource) PutJSON(path string, header http.Header, body map[string]interface{}, params url.Values) (http.Header, []byte, error) {
 	u, err := combine(r.base, path)
 	if err != nil {
 		return nil, nil, err
@@ -200,15 +200,7 @@ func (r *Resource) PutJSON(path string, header http.Header, body map[string]inte
 		return nil, nil, err
 	}
 
-	return requestJSON(http.MethodPut, u, header, bytes.NewReader(jsonBody), params)
-}
-
-// helper function to make real request
-func requestJSON(method string, u *url.URL, header http.Header, body io.Reader, params url.Values) (http.Header, *json.RawMessage, error) {
-	hdr, data, err := request(method, u, header, body, params)
-	var jsonData json.RawMessage
-	json.Unmarshal(data, &jsonData)
-	return hdr, &jsonData, err
+	return request(http.MethodPut, u, header, bytes.NewReader(jsonBody), params)
 }
 
 func checkHTTPStatusError(status int) error {
