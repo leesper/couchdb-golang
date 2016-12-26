@@ -571,8 +571,6 @@ func (d *Database) SetRevsLimit(limit int) error {
 	return err
 }
 
-///////////////////////////////////////////////////////
-
 // docResource returns a Resource instance for docID
 func docResource(res *Resource, docID string) *Resource {
 	if len(docID) == 0 {
@@ -597,3 +595,5 @@ func (d *Database) Cleanup() error {
 	_, _, err := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
 	return err
 }
+
+func (d *Database) Query( /* fields, selector, skip, sort, limit, use_index */ ) {}

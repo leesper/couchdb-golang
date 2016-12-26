@@ -760,3 +760,6 @@ func TestCleanup(t *testing.T) {
 }
 
 // TODO adding new apis about mango query engine
+func TestQueryFieldsSelector(t *testing.T) {}
+func TestQuerySkipSortLimit(t *testing.T)  {}
+func TestQueryUseIndex(t *testing.T)       {}
