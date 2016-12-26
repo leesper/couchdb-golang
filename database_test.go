@@ -611,14 +611,33 @@ func TestBulkUpdateConflict(t *testing.T) {
 	}
 }
 
-// func TestCopyDocConflict() {}
-// func TestCopyDocOverwrite() {}
-// func TestCopyDocSrcObj() {}
-// func TestCopyDocDestObjNoRev() {}
-// func TestCopyDocSrcDictLike() {}
-// func TestCopyDocDestDictLike() {}
-// func TestCopyDocSrcBadDoc() {}
-// func TestCopyDocDestBadDoc() {}
+func TestCopyDocConflict(t *testing.T) {
+	db.Set("foo1", map[string]interface{}{"status": "idle"})
+	db.Set("bar1", map[string]interface{}{"status": "testing"})
+	_, err := db.Copy("foo1", "bar1", "")
+	if err != ErrConflict {
+		t.Errorf(`db copy returns %v, want ErrConflict`, err)
+	}
+}
+
+func TestCopyDocOverwrite(t *testing.T) {
+	foo2 := map[string]interface{}{"status": "testing"}
+	bar2 := map[string]interface{}{"status": "idle"}
+	db.Set("foo2", foo2)
+	db.Set("bar2", bar2)
+	result, err := db.Copy("foo2", "bar2", bar2["_rev"].(string))
+	if err != nil {
+		t.Error(`db copy error`, err)
+	}
+	doc, _ := db.Get("bar2", nil)
+	if result != doc["_rev"].(string) {
+		t.Errorf("db copy returns %s want %s", result, doc["_rev"].(string))
+	}
+	if doc["status"].(string) != "testing" {
+		t.Errorf("db copy status = %s, want testing", doc["status"].(string))
+	}
+}
+
 // func TestChanges() {}
 // func TestChangesConnUsable() {}
 // func TestChangesHeartbeat() {}

@@ -449,6 +449,29 @@ func (d *Database) DeleteAttachment(doc map[string]interface{}, name string) err
 	return nil
 }
 
+// Copy copies an existing document to a new or existing document.
+func (d *Database) Copy(srcID, destID, destRev string) (string, error) {
+	docRes := docResource(d.resource, srcID)
+	var destination string
+	if destRev != "" {
+		destination = fmt.Sprintf("%s?rev=%s", destID, destRev)
+	} else {
+		destination = destID
+	}
+	header := http.Header{
+		"Destination": []string{destination},
+	}
+	_, data, err := request("COPY", docRes.base, header, nil, nil)
+	var rev string
+	if err != nil {
+		return rev, err
+	}
+	var jsonMap map[string]interface{}
+	json.Unmarshal(data, &jsonMap)
+	rev = jsonMap["rev"].(string)
+	return rev, err
+}
+
 ///////////////////////////////////////////////////////
 
 // Len returns the number of documents stored in it.
@@ -527,23 +550,6 @@ func (d *Database) Changes(options url.Values) (map[string]interface{}, bool) {
 func (d *Database) Cleanup() bool {
 	_, _, err := d.resource.PostJSON("_view_cleanup", nil, nil, nil)
 	return err == nil
-}
-
-// Copy copies an existing document to a new or existing document.
-func (d *Database) Copy(srcID, destID string) (string, bool) {
-	docRes := docResource(d.resource, srcID)
-	header := http.Header{
-		"Destination": []string{destID},
-	}
-	_, data, err := request("COPY", docRes.base, header, nil, nil)
-	var rev string
-	if err == nil {
-		var jsonMap map[string]interface{}
-		json.Unmarshal(data, &jsonMap)
-		rev = jsonMap["rev"].(string)
-	}
-
-	return rev, err == nil
 }
 
 // Purge performs complete removing of the given documents.
