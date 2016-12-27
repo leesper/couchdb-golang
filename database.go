@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net/http"
 	"net/url"
 	"os"
@@ -596,4 +599,86 @@ func (d *Database) Cleanup() error {
 	return err
 }
 
-func (d *Database) Query( /* fields, selector, skip, sort, limit, use_index */ ) {}
+// Query returns documents using a declarative JSON querying syntax.
+// fields: Specifying which fields to be returned, if passing nil the entire
+// is returned, no automatic inclusion of _id or other metadata fields.
+// selector: A valid Golang filter statement to select which documents to return.
+// selectorArgs: You may include ?s in selector, which will be replaced by the values from selectorArgs
+// in order that they appear in the selection.
+// sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
+// or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
+// limit: Maximum number of results returned, passing nil to use default value(25).
+// skip: Skip the first 'n' results, where 'n' is the number specified, passing nil for no-skip.
+// index: Instruct a query to use a specific index, specified either as "<design_document>" or
+// ["<design_document>", "<index_name>"], passing nil to use primary index(_all_docs) by default.
+func (d *Database) Query(fields []string, selector string, selectorArgs []string, sorts []string, limit, skip, index interface{}) {
+}
+
+func parseSelectorSyntax(selector string, selectorArgs []string) (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+
+	selector, err := replaceSelectorArgs(selector, selectorArgs)
+	if err != nil {
+		return result, err
+	}
+
+	fmt.Println("selector", selector)
+	// parse selector into abstract syntax tree (ast)
+	expr, err := parser.ParseExpr(selector)
+	if err != nil {
+		return result, err
+	}
+	// recursively processing ast into json object
+	result, err = parseAST(expr)
+
+	return result, nil
+}
+
+func parseAST(expr ast.Expr) (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	var err error
+	switch expr := expr.(type) {
+	case *ast.BinaryExpr:
+		fmt.Println("BinaryExpr", expr)
+		result, err = parseBinary(expr.Op, expr.X, expr.Y)
+	case *ast.UnaryExpr:
+		fmt.Println("UnaryExpr", expr)
+	case *ast.CallExpr:
+		fmt.Println("CallExpr", expr)
+	case *ast.Ident:
+		fmt.Println("Ident", expr)
+	default:
+		return result, errors.New("expressions other than unary, binary and call are not allowed")
+	}
+	return result, err
+}
+
+func parseBinary(operator token.Token, left, right ast.Expr) (map[string]interface{}, error) {
+	switch operator {
+	case token.AND:
+
+	}
+}
+
+func replaceSelectorArgs(selector string, selectorArgs []string) (string, error) {
+	paramsCnt := strings.Count(selector, "?")
+	argsCnt := len(selectorArgs)
+	if paramsCnt != argsCnt {
+		return selector, fmt.Errorf("select args not match %d=%d", paramsCnt, argsCnt)
+	}
+	selector = strings.ToLower(selector)
+	// protect selector against query selector injection attacks
+	if strings.Contains(selector, "$") {
+		return selector, fmt.Errorf("no $s are allowed in selector: %s", selector)
+	}
+	for _, arg := range selectorArgs {
+		if strings.Contains(arg, "$") {
+			// protect arg against query selector injection attacks
+			return selector, fmt.Errorf("no $s are allowed in arg: %s", arg)
+		}
+		selector = strings.Replace(selector, "?", arg, 1)
+	}
+	return selector, nil
+}
+
+func parseSorts(sorts []string)/*[]map[string]string*/ {}

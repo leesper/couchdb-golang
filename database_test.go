@@ -759,7 +759,11 @@ func TestCleanup(t *testing.T) {
 	}
 }
 
-// TODO adding new apis about mango query engine
+// TODO adding new apis for mango query engine
+func TestQuery(t *testing.T) {
+	parseSelectorSyntax(`year == ?`, []string{"1977"})
+}
+
 func TestQueryFieldsSelector(t *testing.T) {}
 func TestQuerySkipSortLimit(t *testing.T)  {}
 func TestQueryUseIndex(t *testing.T)       {}
