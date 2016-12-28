@@ -648,6 +648,9 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 		return parseFuncCall(expr.Fun, expr.Args)
 	case *ast.Ident:
 		fmt.Println("Ident", expr)
+		if expr.Name == "nil" { // for nil identifier such as _id > nil
+			return nil, nil
+		}
 		return expr.Name, nil
 	case *ast.BasicLit:
 		fmt.Println("BasicLit", expr)
@@ -780,8 +783,26 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		return map[string]interface{}{
 			"$nor": selectors,
 		}, nil
+	case "all":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function all(field, array), invalid %d arguments", len(args))
+		}
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		arrayExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$all": arrayExpr},
+		}, nil
 	}
-	return nil, fmt.Errorf("function %s not supported", functionName)
+	return nil, fmt.Errorf("function %s() not supported", functionName)
 }
 
 func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
@@ -791,7 +812,7 @@ func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, e
 		return selector, fmt.Errorf("select args not match %d=%d", paramsCnt, argsCnt)
 	}
 
-	for _, arg := range selectorArgs {
+	for idx, arg := range selectorArgs {
 		kind := reflect.ValueOf(arg).Kind()
 		switch kind {
 		case reflect.Bool:
@@ -805,12 +826,16 @@ func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, e
 			selector = strings.Replace(selector, "?", "%#v", 1)
 		case reflect.String:
 			selector = strings.Replace(selector, "?", "%q", 1)
+		case reflect.Invalid:
+			selector = strings.Replace(selector, "?", "%s", 1)
+			selectorArgs[idx] = "nil"
 		default:
 			return "", fmt.Errorf("arg type %s not supported in selector", kind)
 		}
 	}
 
 	stmt := fmt.Sprintf(selector, selectorArgs...)
+	fmt.Println(selector, stmt)
 	// protect selector against query selector injection attacks
 	if strings.Contains(stmt, "$") {
 		return stmt, fmt.Errorf("no $s are allowed in selector: %s", stmt)

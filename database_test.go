@@ -759,8 +759,9 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax("year == %d", []interface{}{2004})
 	// result, err := parseSelectorSyntax("year > ? && !(director == ? || director == ?)", []interface{}{1993, "George Lucas", "Steven Spielberg"})
 	// result, err := parseSelectorSyntax("director == %q || director == %q", []interface{}{"George Lucas", "Steven Spielberg"})
-	result, err := parseSelectorSyntax("year >= ? && year <= ? && nor(year == ?, year == ?, year == ?)", []interface{}{1900, 2000, 1990, 1989, 1997})
+	// result, err := parseSelectorSyntax("year >= ? && year <= ? && nor(year == ?, year == ?, year == ?)", []interface{}{1900, 2000, 1990, 1989, 1997})
 	// result, err := parseSelectorSyntax("year >= ? && year <= ?", []interface{}{1900, 1910})
+	result, err := parseSelectorSyntax("_id > ? && all(?, ?)", []interface{}{nil, "genre", []string{"Comedy", "Short"}})
 	if err != nil {
 		fmt.Println(err)
 	}
