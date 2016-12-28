@@ -642,6 +642,7 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 		return parseBinary(expr.Op, expr.X, expr.Y)
 	case *ast.UnaryExpr:
 		fmt.Println("UnaryExpr", expr)
+		return parseUnary(expr.Op, expr.X)
 	case *ast.CallExpr:
 		fmt.Println("CallExpr", expr)
 	case *ast.Ident:
@@ -699,12 +700,12 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 	panic("never reached")
 }
 
-func parseBinary(operator token.Token, leftExpr, rightExpr ast.Expr) (interface{}, error) {
-	left, err := parseAST(leftExpr)
+func parseBinary(operator token.Token, leftOperand, rightOperand ast.Expr) (interface{}, error) {
+	left, err := parseAST(leftOperand)
 	if err != nil {
 		return nil, err
 	}
-	right, err := parseAST(rightExpr)
+	right, err := parseAST(rightOperand)
 	if err != nil {
 		return nil, err
 	}
@@ -744,8 +745,22 @@ func parseBinary(operator token.Token, leftExpr, rightExpr ast.Expr) (interface{
 			"$or": []interface{}{left, right},
 		}, nil
 	}
+	return nil, fmt.Errorf("binary operator %s not supported", operator)
+}
 
-	return nil, fmt.Errorf("operator %v not implemented", operator)
+func parseUnary(operator token.Token, operandExpr ast.Expr) (interface{}, error) {
+	operand, err := parseAST(operandExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	switch operator {
+	case token.NOT:
+		return map[string]interface{}{
+			"$not": operand,
+		}, nil
+	}
+	return nil, fmt.Errorf("unary operator %s not supported", operator)
 }
 
 func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
@@ -768,7 +783,7 @@ func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, e
 		case reflect.Array, reflect.Slice:
 			selector = strings.Replace(selector, "?", "%#v", 1)
 		case reflect.String:
-			selector = strings.Replace(selector, "?", "%s", 1)
+			selector = strings.Replace(selector, "?", "%q", 1)
 		default:
 			return "", fmt.Errorf("arg type %s not supported in selector", kind)
 		}
