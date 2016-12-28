@@ -644,7 +644,8 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 		fmt.Println("UnaryExpr", expr)
 		return parseUnary(expr.Op, expr.X)
 	case *ast.CallExpr:
-		fmt.Println("CallExpr", expr)
+		fmt.Println("CallExpr", expr, expr.Fun, expr.Args)
+		return parseFuncCall(expr.Fun, expr.Args)
 	case *ast.Ident:
 		fmt.Println("Ident", expr)
 		return expr.Name, nil
@@ -761,6 +762,26 @@ func parseUnary(operator token.Token, operandExpr ast.Expr) (interface{}, error)
 		}, nil
 	}
 	return nil, fmt.Errorf("unary operator %s not supported", operator)
+}
+
+func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
+	funcIdent := funcExpr.(*ast.Ident)
+	functionName := funcIdent.Name
+	switch functionName {
+	case "nor":
+		selectors := make([]interface{}, len(args))
+		for idx, arg := range args {
+			selector, err := parseAST(arg)
+			if err != nil {
+				return nil, err
+			}
+			selectors[idx] = selector
+		}
+		return map[string]interface{}{
+			"$nor": selectors,
+		}, nil
+	}
+	return nil, fmt.Errorf("function %s not supported", functionName)
 }
 
 func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
