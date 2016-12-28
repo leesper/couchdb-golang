@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -602,83 +603,176 @@ func (d *Database) Cleanup() error {
 // Query returns documents using a declarative JSON querying syntax.
 // fields: Specifying which fields to be returned, if passing nil the entire
 // is returned, no automatic inclusion of _id or other metadata fields.
-// selector: A valid Golang filter statement to select which documents to return.
-// selectorArgs: You may include ?s in selector, which will be replaced by the values from selectorArgs
-// in order that they appear in the selection.
+// selector: A formatted filter string to select which documents to return.
+// selectorArgs: You may include %s in selector, which will be replaced by the values from selectorArgs
+// in order that they appear in the selection, just like fmt.Println().
 // sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
 // or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
 // limit: Maximum number of results returned, passing nil to use default value(25).
 // skip: Skip the first 'n' results, where 'n' is the number specified, passing nil for no-skip.
 // index: Instruct a query to use a specific index, specified either as "<design_document>" or
 // ["<design_document>", "<index_name>"], passing nil to use primary index(_all_docs) by default.
-func (d *Database) Query(fields []string, selector string, selectorArgs []string, sorts []string, limit, skip, index interface{}) {
+func (d *Database) Query(fields []string, selector string, selectorArgs []interface{}, sorts []string, limit, skip, index interface{}) {
 }
 
-func parseSelectorSyntax(selector string, selectorArgs []string) (map[string]interface{}, error) {
-	result := map[string]interface{}{}
-
+func parseSelectorSyntax(selector string, selectorArgs []interface{}) (interface{}, error) {
 	selector, err := replaceSelectorArgs(selector, selectorArgs)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
-	fmt.Println("selector", selector)
 	// parse selector into abstract syntax tree (ast)
 	expr, err := parser.ParseExpr(selector)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 	// recursively processing ast into json object
-	result, err = parseAST(expr)
+	selectObj, err := parseAST(expr)
+	if err != nil {
+		return nil, err
+	}
 
-	return result, nil
+	return selectObj, nil
 }
 
-func parseAST(expr ast.Expr) (map[string]interface{}, error) {
-	result := map[string]interface{}{}
-	var err error
+func parseAST(expr ast.Expr) (interface{}, error) {
 	switch expr := expr.(type) {
 	case *ast.BinaryExpr:
 		fmt.Println("BinaryExpr", expr)
-		result, err = parseBinary(expr.Op, expr.X, expr.Y)
+		return parseBinary(expr.Op, expr.X, expr.Y)
 	case *ast.UnaryExpr:
 		fmt.Println("UnaryExpr", expr)
 	case *ast.CallExpr:
 		fmt.Println("CallExpr", expr)
 	case *ast.Ident:
 		fmt.Println("Ident", expr)
+		return expr.Name, nil
+	case *ast.BasicLit:
+		fmt.Println("BasicLit", expr)
+		switch expr.Kind {
+		case token.INT:
+			intVal, err := strconv.Atoi(expr.Value)
+			if err != nil {
+				return nil, err
+			}
+			return intVal, nil
+		case token.FLOAT:
+			floatVal, err := strconv.ParseFloat(expr.Value, 64)
+			if err != nil {
+				return nil, err
+			}
+			return floatVal, nil
+		case token.STRING:
+			return strings.Trim(expr.Value, `"`), nil
+		default:
+			return nil, fmt.Errorf("token type %s not supported", expr.Kind.String())
+		}
+	case *ast.SelectorExpr:
+		fmt.Println("SelectorExpr", expr.X, expr.Sel)
+		xExpr, err := parseAST(expr.X)
+		if err != nil {
+			return nil, err
+		}
+		return fmt.Sprintf("%s.%s", xExpr, expr.Sel.Name), nil
+	case *ast.ParenExpr:
+		pExpr, err := parseAST(expr.X)
+		if err != nil {
+			return nil, err
+		}
+		return pExpr, nil
+	case *ast.CompositeLit:
+		if _, ok := expr.Type.(*ast.ArrayType); !ok {
+			return nil, fmt.Errorf("not an ArrayType for a composite literal %v", expr.Type)
+		}
+		elements := make([]interface{}, len(expr.Elts))
+		for idx, elt := range expr.Elts {
+			e, err := parseAST(elt)
+			if err != nil {
+				return nil, err
+			}
+			elements[idx] = e
+		}
+		return elements, nil
 	default:
-		return result, errors.New("expressions other than unary, binary and call are not allowed")
+		return nil, fmt.Errorf("expressions other than unary, binary and function call are not allowed %v", expr)
 	}
-	return result, err
+	panic("never reached")
 }
 
-func parseBinary(operator token.Token, left, right ast.Expr) (map[string]interface{}, error) {
+func parseBinary(operator token.Token, leftExpr, rightExpr ast.Expr) (interface{}, error) {
+	left, err := parseAST(leftExpr)
+	if err != nil {
+		return nil, err
+	}
+	right, err := parseAST(rightExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	// <, <=, ==, !=, >=, >, &&, ||
 	switch operator {
-	case token.AND:
-
+	case token.LSS:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$lt": right},
+		}, nil
+	case token.LEQ:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$lte": right},
+		}, nil
+	case token.EQL:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$eq": right},
+		}, nil
+	case token.NEQ:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$ne": right},
+		}, nil
+	case token.GEQ:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$gte": right},
+		}, nil
+	case token.GTR:
+		return map[string]interface{}{
+			left.(string): map[string]interface{}{"$gt": right},
+		}, nil
+	case token.LAND:
+		return map[string]interface{}{
+			"$and": []interface{}{left, right},
+		}, nil
+	case token.LOR:
+		return map[string]interface{}{
+			"$or": []interface{}{left, right},
+		}, nil
 	}
+
+	return nil, fmt.Errorf("operator %v not implemented", operator)
 }
 
-func replaceSelectorArgs(selector string, selectorArgs []string) (string, error) {
-	paramsCnt := strings.Count(selector, "?")
+func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
+	paramsCnt := strings.Count(selector, "%")
 	argsCnt := len(selectorArgs)
 	if paramsCnt != argsCnt {
 		return selector, fmt.Errorf("select args not match %d=%d", paramsCnt, argsCnt)
 	}
-	selector = strings.ToLower(selector)
+	stmt := fmt.Sprintf(selector, selectorArgs...)
 	// protect selector against query selector injection attacks
-	if strings.Contains(selector, "$") {
-		return selector, fmt.Errorf("no $s are allowed in selector: %s", selector)
+	if strings.Contains(stmt, "$") {
+		return stmt, fmt.Errorf("no $s are allowed in selector: %s", stmt)
 	}
-	for _, arg := range selectorArgs {
-		if strings.Contains(arg, "$") {
-			// protect arg against query selector injection attacks
-			return selector, fmt.Errorf("no $s are allowed in arg: %s", arg)
-		}
-		selector = strings.Replace(selector, "?", arg, 1)
-	}
-	return selector, nil
+	return stmt, nil
 }
 
 func parseSorts(sorts []string)/*[]map[string]string*/ {}
+
+func beautifulJSONString(jsonable interface{}) (string, error) {
+	b, err := json.Marshal(jsonable)
+	if err != nil {
+		return "", err
+	}
+	var out bytes.Buffer
+	err = json.Indent(&out, b, "", "\t")
+	if err != nil {
+		return "", err
+	}
+	return out.String(), nil
+}
