@@ -603,9 +603,9 @@ func (d *Database) Cleanup() error {
 // Query returns documents using a declarative JSON querying syntax.
 // fields: Specifying which fields to be returned, if passing nil the entire
 // is returned, no automatic inclusion of _id or other metadata fields.
-// selector: A formatted filter string to select which documents to return.
-// selectorArgs: You may include %s in selector, which will be replaced by the values from selectorArgs
-// in order that they appear in the selection, just like fmt.Println().
+// selector: A filter declaring which documents to return, formatted as a Golang statement.
+// selectorArgs: You may include ? in selector, which will be replaced by the values from selectorArgs
+// in order that they appear in the selection.
 // sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
 // or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
 // limit: Maximum number of results returned, passing nil to use default value(25).
@@ -749,11 +749,31 @@ func parseBinary(operator token.Token, leftExpr, rightExpr ast.Expr) (interface{
 }
 
 func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
-	paramsCnt := strings.Count(selector, "%")
+	paramsCnt := strings.Count(selector, "?")
 	argsCnt := len(selectorArgs)
 	if paramsCnt != argsCnt {
 		return selector, fmt.Errorf("select args not match %d=%d", paramsCnt, argsCnt)
 	}
+
+	for _, arg := range selectorArgs {
+		kind := reflect.ValueOf(arg).Kind()
+		switch kind {
+		case reflect.Bool:
+			selector = strings.Replace(selector, "?", "%t", 1)
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			selector = strings.Replace(selector, "?", "%d", 1)
+		case reflect.Float32, reflect.Float64:
+			selector = strings.Replace(selector, "?", "%f", 1)
+		case reflect.Array, reflect.Slice:
+			selector = strings.Replace(selector, "?", "%#v", 1)
+		case reflect.String:
+			selector = strings.Replace(selector, "?", "%s", 1)
+		default:
+			return "", fmt.Errorf("arg type %s not supported in selector", kind)
+		}
+	}
+
 	stmt := fmt.Sprintf(selector, selectorArgs...)
 	// protect selector against query selector injection attacks
 	if strings.Contains(stmt, "$") {
