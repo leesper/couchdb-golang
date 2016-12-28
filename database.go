@@ -772,6 +772,9 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 	functionName := funcIdent.Name
 	switch functionName {
 	case "nor":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("function nor(exprs...) need at least 1 arguments, not $d", len(args))
+		}
 		selectors := make([]interface{}, len(args))
 		for idx, arg := range args {
 			selector, err := parseAST(arg)
@@ -785,7 +788,7 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		}, nil
 	case "all":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("function all(field, array), invalid %d arguments", len(args))
+			return nil, fmt.Errorf("function all(field, array) need 2 arguments, not %d", len(args))
 		}
 		fieldExpr, err := parseAST(args[0])
 		if err != nil {
@@ -801,8 +804,70 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$all": arrayExpr},
 		}, nil
+	case "any":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function any(field, condition) need 2 arguments, not %d", len(args))
+		}
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		anyExpr, err := parseAST(args[1])
+		anyExpr, err = removeFieldMap(fieldExpr.(string), anyExpr)
+		s, _ := beautifulJSONString(anyExpr)
+		fmt.Println("COND", s)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$elemMatch": anyExpr},
+		}, nil
 	}
 	return nil, fmt.Errorf("function %s() not supported", functionName)
+}
+
+func removeFieldMap(fieldName string, exprMap interface{}) (interface{}, error) {
+	mapValue := reflect.ValueOf(exprMap)
+	if mapValue.Kind() != reflect.Map {
+		return nil, errors.New("not a map type")
+	}
+	mapKeys := mapValue.MapKeys()
+	for _, mapKey := range mapKeys {
+		value := mapValue.MapIndex(mapKey)
+		if reflect.ValueOf(value.Interface()).Kind() == reflect.Slice {
+			for idx := 0; idx < value.Len(); idx++ {
+				elemVal := value.Index(idx)
+				processed, err := removeFieldMap(fieldName, elemVal.Interface())
+				if err != nil {
+					return nil, err
+				}
+				elemVal.Set(reflect.ValueOf(processed))
+			}
+			mapValue.SetMapIndex(mapKey, value)
+		} else if reflect.ValueOf(value.Interface()).Kind() == reflect.Map {
+			if mapKey.Interface().(string) == fieldName { // found
+				if value.Len() != 1 {
+					return nil, fmt.Errorf("field map length %d, not 1", value.Len())
+				}
+				mapValue.SetMapIndex(mapKey, reflect.Value{}) // delete the key towards field name
+				keys := value.MapKeys()
+				for _, key := range keys { // moves what origins in value(the field map) one level up
+					val := value.MapIndex(key)
+					mapValue.SetMapIndex(key, val)
+				}
+			} else {
+				processed, err := removeFieldMap(fieldName, value.Interface())
+				if err != nil {
+					return nil, err
+				}
+				mapValue.SetMapIndex(mapKey, reflect.ValueOf(processed))
+			}
+		}
+	}
+	return mapValue.Interface(), nil
 }
 
 func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
