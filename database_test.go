@@ -763,7 +763,11 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax("year >= 1990 && year <= 1910")
 	// result, err := parseSelectorSyntax(`_id > nil && all(genre, []string{"Comedy", "Short"})`)
 	// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Comedy" || genre == "Short")`)
-	result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Short" || score >= 8)`)
+	// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Short" || score >= 8)`)
+	// result, err := parseSelectorSyntax(`exists(director, true)`)
+	// result, err := parseSelectorSyntax(`typeof(genre, "array")`)
+	// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
+	result, err := parseSelectorSyntax(`in(year, []int{1990, 1992})`)
 	if err != nil {
 		fmt.Println(err)
 	}

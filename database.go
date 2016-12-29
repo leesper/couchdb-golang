@@ -647,10 +647,17 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 		return parseFuncCall(expr.Fun, expr.Args)
 	case *ast.Ident:
 		fmt.Println("Ident", expr)
-		if expr.Name == "nil" { // for nil identifier such as _id > nil
+		switch expr.Name {
+		case "nil": // for nil value such as _id > nil
 			return nil, nil
+		case "true": // for boolean value true
+			return true, nil
+		case "false":
+			return false, nil // for boolean value false
+		default:
+			return expr.Name, nil
 		}
-		return expr.Name, nil
+		panic("never reached")
 	case *ast.BasicLit:
 		fmt.Println("BasicLit", expr)
 		switch expr.Kind {
@@ -774,6 +781,7 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("function nor(exprs...) need at least 1 arguments, not $d", len(args))
 		}
+
 		selectors := make([]interface{}, len(args))
 		for idx, arg := range args {
 			selector, err := parseAST(arg)
@@ -782,6 +790,7 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 			}
 			selectors[idx] = selector
 		}
+
 		return map[string]interface{}{
 			"$nor": selectors,
 		}, nil
@@ -789,17 +798,20 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		if len(args) != 2 {
 			return nil, fmt.Errorf("function all(field, array) need 2 arguments, not %d", len(args))
 		}
+
 		fieldExpr, err := parseAST(args[0])
-		if err != nil {
-			return nil, err
-		}
-		arrayExpr, err := parseAST(args[1])
 		if err != nil {
 			return nil, err
 		}
 		if _, ok := fieldExpr.(string); !ok {
 			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
 		}
+
+		arrayExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$all": arrayExpr},
 		}, nil
@@ -807,20 +819,86 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		if len(args) != 2 {
 			return nil, fmt.Errorf("function any(field, condition) need 2 arguments, not %d", len(args))
 		}
+
 		fieldExpr, err := parseAST(args[0])
-		if err != nil {
-			return nil, err
-		}
-		anyExpr, err := parseAST(args[1])
-		anyExpr, err = removeFieldKey(fieldExpr.(string), anyExpr)
 		if err != nil {
 			return nil, err
 		}
 		if _, ok := fieldExpr.(string); !ok {
 			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
 		}
+
+		anyExpr, err := parseAST(args[1])
+		anyExpr, err = removeFieldKey(fieldExpr.(string), anyExpr)
+		if err != nil {
+			return nil, err
+		}
+
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$elemMatch": anyExpr},
+		}, nil
+	case "exists":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function exists(field, boolean) need 2 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		boolExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$exists": boolExpr},
+		}, nil
+	case "typeof":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function typeof(field, type) need 2 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		typeStr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$type": typeStr},
+		}, nil
+	case "in":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function in(field, array) need 2 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		arrExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$in": arrExpr},
 		}, nil
 	}
 	return nil, fmt.Errorf("function %s() not supported", functionName)
