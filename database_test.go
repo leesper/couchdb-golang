@@ -757,7 +757,7 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004 && director == "Dave Willis"`)
 	// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004`)
 	// result, err := parseSelectorSyntax(`year == 2004`)
-	// result, err := parseSelectorSyntax(`year >= 1990 && !(director == "George Lucas" || director == "Steven Spielberg")`)
+	result, err := parseSelectorSyntax(`year >= 1990 && (director == "George Lucas" || director == "Steven Spielberg")`)
 	// result, err := parseSelectorSyntax(`director == "George Lucas" || director == "Steven Spielberg"`)
 	// result, err := parseSelectorSyntax(`year >= 1900 && year <= 2000 && nor(year == 1990, year == 1989, year == 1997)`)
 	// result, err := parseSelectorSyntax("year >= 1990 && year <= 1910")
@@ -770,11 +770,12 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
 	// result, err := parseSelectorSyntax(`size(genre, 2)`)
 	// result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
-	result, err := parseSelectorSyntax(`regex(title, "^A")`)
+	// result, err := parseSelectorSyntax(`regex(title, "^A")`)
 	if err != nil {
 		fmt.Println(err)
 	}
 	s, _ := beautifulJSONString(result)
+	fmt.Println(`year >= 1990 && (director == "George Lucas" || director == "Steven Spielberg")`)
 	fmt.Println(s)
 }
 
