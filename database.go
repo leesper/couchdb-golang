@@ -942,6 +942,70 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$size": intExpr},
 		}, nil
+	case "mod":
+		if len(args) != 3 {
+			return nil, fmt.Errorf("function mod(field, divisor, remainder) need 3 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		divisorExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+		divisor, ok := divisorExpr.(int)
+		if !ok {
+			return nil, fmt.Errorf("invalid divisor %s", divisorExpr)
+		}
+
+		remainderExpr, err := parseAST(args[2])
+		if err != nil {
+			return nil, err
+		}
+		remainder, ok := remainderExpr.(int)
+		if !ok {
+			return nil, fmt.Errorf("invalid remainder %s", remainderExpr)
+		}
+
+		expr, err := parser.ParseExpr(fmt.Sprintf("%#v", []int{divisor, remainder}))
+		if err != nil {
+			return nil, err
+		}
+		arrExpr, err := parseAST(expr)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$mod": arrExpr},
+		}, nil
+	case "regex":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function regex(field, regexstr) need 2 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		regexExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$regex": regexExpr},
+		}, nil
 	}
 	return nil, fmt.Errorf("function %s() not supported", functionName)
 }

@@ -768,7 +768,9 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax(`typeof(genre, "array")`)
 	// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
 	// result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
-	result, err := parseSelectorSyntax(`size(genre, 2)`)
+	// result, err := parseSelectorSyntax(`size(genre, 2)`)
+	// result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
+	result, err := parseSelectorSyntax(`regex(title, "^A")`)
 	if err != nil {
 		fmt.Println(err)
 	}
