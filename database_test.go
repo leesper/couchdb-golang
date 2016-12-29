@@ -767,7 +767,7 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax(`exists(director, true)`)
 	// result, err := parseSelectorSyntax(`typeof(genre, "array")`)
 	// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
-	result, err := parseSelectorSyntax(`in(year, []int{1990, 1992})`)
+	result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
 	if err != nil {
 		fmt.Println(err)
 	}

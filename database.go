@@ -900,6 +900,27 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$in": arrExpr},
 		}, nil
+	case "nin":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("function nin(field, array) need 2 arguments, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		arrExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): map[string]interface{}{"$nin": arrExpr},
+		}, nil
 	}
 	return nil, fmt.Errorf("function %s() not supported", functionName)
 }
