@@ -603,22 +603,20 @@ func (d *Database) Cleanup() error {
 // Query returns documents using a declarative JSON querying syntax.
 // fields: Specifying which fields to be returned, if passing nil the entire
 // is returned, no automatic inclusion of _id or other metadata fields.
-// selector: A filter declaring which documents to return, formatted as a Golang statement.
-// selectorArgs: You may include ? in selector, which will be replaced by the values from selectorArgs
-// in order that they appear in the selection.
+// selector: A filter raw string declaring which documents to return, formatted as a Golang statement.
 // sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
 // or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
 // limit: Maximum number of results returned, passing nil to use default value(25).
 // skip: Skip the first 'n' results, where 'n' is the number specified, passing nil for no-skip.
 // index: Instruct a query to use a specific index, specified either as "<design_document>" or
 // ["<design_document>", "<index_name>"], passing nil to use primary index(_all_docs) by default.
-func (d *Database) Query(fields []string, selector string, selectorArgs []interface{}, sorts []string, limit, skip, index interface{}) {
+func (d *Database) Query(fields []string, selector string, sorts []string, limit, skip, index interface{}) {
 }
 
-func parseSelectorSyntax(selector string, selectorArgs []interface{}) (interface{}, error) {
-	selector, err := replaceSelectorArgs(selector, selectorArgs)
-	if err != nil {
-		return nil, err
+func parseSelectorSyntax(selector string) (interface{}, error) {
+	// protect selector against query selector injection attacks
+	if strings.Contains(selector, "$") {
+		return nil, fmt.Errorf("no $s are allowed in selector: %s", selector)
 	}
 
 	// parse selector into abstract syntax tree (ast)
@@ -626,6 +624,7 @@ func parseSelectorSyntax(selector string, selectorArgs []interface{}) (interface
 	if err != nil {
 		return nil, err
 	}
+
 	// recursively processing ast into json object
 	selectObj, err := parseAST(expr)
 	if err != nil {
@@ -813,9 +812,7 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 			return nil, err
 		}
 		anyExpr, err := parseAST(args[1])
-		anyExpr, err = removeFieldMap(fieldExpr.(string), anyExpr)
-		s, _ := beautifulJSONString(anyExpr)
-		fmt.Println("COND", s)
+		anyExpr, err = removeFieldKey(fieldExpr.(string), anyExpr)
 		if err != nil {
 			return nil, err
 		}
@@ -829,37 +826,45 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 	return nil, fmt.Errorf("function %s() not supported", functionName)
 }
 
-func removeFieldMap(fieldName string, exprMap interface{}) (interface{}, error) {
+// removeFieldKey removes the key which equals to fieldName,
+// moves its value one level up in the map.
+func removeFieldKey(fieldName string, exprMap interface{}) (interface{}, error) {
 	mapValue := reflect.ValueOf(exprMap)
 	if mapValue.Kind() != reflect.Map {
 		return nil, errors.New("not a map type")
 	}
 	mapKeys := mapValue.MapKeys()
 	for _, mapKey := range mapKeys {
-		value := mapValue.MapIndex(mapKey)
-		if reflect.ValueOf(value.Interface()).Kind() == reflect.Slice {
+		// exprMap is a interface type contains map[string]interface{}
+		// so MapIndex returns a value whose Kind is Interface, so we
+		// have to call its Interface() methods then pass to ValueOf()
+		// to get the underline map type.
+		value := reflect.ValueOf(mapValue.MapIndex(mapKey).Interface())
+		if value.Kind() == reflect.Slice {
 			for idx := 0; idx < value.Len(); idx++ {
 				elemVal := value.Index(idx)
-				processed, err := removeFieldMap(fieldName, elemVal.Interface())
+				processed, err := removeFieldKey(fieldName, elemVal.Interface())
 				if err != nil {
 					return nil, err
 				}
 				elemVal.Set(reflect.ValueOf(processed))
 			}
 			mapValue.SetMapIndex(mapKey, value)
-		} else if reflect.ValueOf(value.Interface()).Kind() == reflect.Map {
+		} else if value.Kind() == reflect.Map {
 			if mapKey.Interface().(string) == fieldName { // found
 				if value.Len() != 1 {
 					return nil, fmt.Errorf("field map length %d, not 1", value.Len())
 				}
-				mapValue.SetMapIndex(mapKey, reflect.Value{}) // delete the key towards field name
+				// setting to empty value deletes the key
+				mapValue.SetMapIndex(mapKey, reflect.Value{})
 				keys := value.MapKeys()
-				for _, key := range keys { // moves what origins in value(the field map) one level up
+				// moves the value one level up
+				for _, key := range keys {
 					val := value.MapIndex(key)
 					mapValue.SetMapIndex(key, val)
 				}
 			} else {
-				processed, err := removeFieldMap(fieldName, value.Interface())
+				processed, err := removeFieldKey(fieldName, value.Interface())
 				if err != nil {
 					return nil, err
 				}
@@ -868,44 +873,6 @@ func removeFieldMap(fieldName string, exprMap interface{}) (interface{}, error) 
 		}
 	}
 	return mapValue.Interface(), nil
-}
-
-func replaceSelectorArgs(selector string, selectorArgs []interface{}) (string, error) {
-	paramsCnt := strings.Count(selector, "?")
-	argsCnt := len(selectorArgs)
-	if paramsCnt != argsCnt {
-		return selector, fmt.Errorf("select args not match %d=%d", paramsCnt, argsCnt)
-	}
-
-	for idx, arg := range selectorArgs {
-		kind := reflect.ValueOf(arg).Kind()
-		switch kind {
-		case reflect.Bool:
-			selector = strings.Replace(selector, "?", "%t", 1)
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			selector = strings.Replace(selector, "?", "%d", 1)
-		case reflect.Float32, reflect.Float64:
-			selector = strings.Replace(selector, "?", "%f", 1)
-		case reflect.Array, reflect.Slice:
-			selector = strings.Replace(selector, "?", "%#v", 1)
-		case reflect.String:
-			selector = strings.Replace(selector, "?", "%q", 1)
-		case reflect.Invalid:
-			selector = strings.Replace(selector, "?", "%s", 1)
-			selectorArgs[idx] = "nil"
-		default:
-			return "", fmt.Errorf("arg type %s not supported in selector", kind)
-		}
-	}
-
-	stmt := fmt.Sprintf(selector, selectorArgs...)
-	fmt.Println(selector, stmt)
-	// protect selector against query selector injection attacks
-	if strings.Contains(stmt, "$") {
-		return stmt, fmt.Errorf("no $s are allowed in selector: %s", stmt)
-	}
-	return stmt, nil
 }
 
 func parseSorts(sorts []string)/*[]map[string]string*/ {}
