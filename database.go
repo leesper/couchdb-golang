@@ -600,10 +600,10 @@ func (d *Database) Cleanup() error {
 	return err
 }
 
-// Query returns documents using a declarative JSON querying syntax.
+// Query returns documents using a conditional selector statement in Golang.
 // fields: Specifying which fields to be returned, if passing nil the entire
 // is returned, no automatic inclusion of _id or other metadata fields.
-// selector: A filter raw string declaring which documents to return, formatted as a Golang statement.
+// selector: A filter string declaring which documents to return, formatted as a Golang statement.
 // sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
 // or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
 // limit: Maximum number of results returned, passing nil to use default value(25).
@@ -613,6 +613,10 @@ func (d *Database) Cleanup() error {
 func (d *Database) Query(fields []string, selector string, sorts []string, limit, skip, index interface{}) {
 }
 
+// QueryJSON returns documents using a declarative JSON querying syntax.
+func (d *Database) QueryJSON(jsonQuery map[string]interface{}) {}
+
+// parseSelectorSyntax returns a map representing the selector JSON struct.
 func parseSelectorSyntax(selector string) (interface{}, error) {
 	// protect selector against query selector injection attacks
 	if strings.Contains(selector, "$") {
@@ -634,6 +638,31 @@ func parseSelectorSyntax(selector string) (interface{}, error) {
 	return selectObj, nil
 }
 
+// parseSortSyntax returns a slice of sort JSON struct.
+func parseSortSyntax(sorts []string) (interface{}, error) {
+	if sorts == nil {
+		return nil, nil
+	}
+
+	sortObjs := []interface{}{}
+	for _, sort := range sorts {
+		sortExpr, err := parser.ParseExpr(sort)
+		if err != nil {
+			return nil, err
+		}
+
+		sortObj, err := parseAST(sortExpr)
+		if err != nil {
+			return nil, err
+		}
+		sortObjs = append(sortObjs, sortObj)
+	}
+
+	return sortObjs, nil
+}
+
+// parseAST converts and returns a JSON struct according to
+// CouchDB mango query syntax for the abstract syntax tree represented by expr.
 func parseAST(expr ast.Expr) (interface{}, error) {
 	switch expr := expr.(type) {
 	case *ast.BinaryExpr:
@@ -710,6 +739,8 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 	panic("never reached")
 }
 
+// parseBinary parses and returns a JSON struct according to
+// CouchDB mango query syntax for the supported binary operators.
 func parseBinary(operator token.Token, leftOperand, rightOperand ast.Expr) (interface{}, error) {
 	left, err := parseAST(leftOperand)
 	if err != nil {
@@ -758,6 +789,8 @@ func parseBinary(operator token.Token, leftOperand, rightOperand ast.Expr) (inte
 	return nil, fmt.Errorf("binary operator %s not supported", operator)
 }
 
+// parseUnary parses and returns a JSON struct according to
+// CouchDB mango query syntax for supported unary operators.
 func parseUnary(operator token.Token, operandExpr ast.Expr) (interface{}, error) {
 	operand, err := parseAST(operandExpr)
 	if err != nil {
@@ -773,6 +806,8 @@ func parseUnary(operator token.Token, operandExpr ast.Expr) (interface{}, error)
 	return nil, fmt.Errorf("unary operator %s not supported", operator)
 }
 
+// parseFuncCall parses and returns a JSON struct according to
+// CouchDB mango query syntax for supported meta functions.
 func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 	funcIdent := funcExpr.(*ast.Ident)
 	functionName := funcIdent.Name
@@ -1006,6 +1041,38 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		return map[string]interface{}{
 			fieldExpr.(string): map[string]interface{}{"$regex": regexExpr},
 		}, nil
+	case "asc": // for sort syntax
+		if len(args) != 1 {
+			return nil, fmt.Errorf("function asc(field) need 1 argument, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): "asc",
+		}, nil
+	case "desc": // for sort syntax
+		if len(args) != 1 {
+			return nil, fmt.Errorf("function desc(field) need 1 argument, not %d", len(args))
+		}
+
+		fieldExpr, err := parseAST(args[0])
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := fieldExpr.(string); !ok {
+			return nil, fmt.Errorf("invalid field expression type %s", fieldExpr)
+		}
+
+		return map[string]interface{}{
+			fieldExpr.(string): "desc",
+		}, nil
 	}
 	return nil, fmt.Errorf("function %s() not supported", functionName)
 }
@@ -1059,8 +1126,7 @@ func removeFieldKey(fieldName string, exprMap interface{}) (interface{}, error) 
 	return mapValue.Interface(), nil
 }
 
-func parseSorts(sorts []string)/*[]map[string]string*/ {}
-
+// beautifulJSONString returns a beautified string representing the JSON struct.
 func beautifulJSONString(jsonable interface{}) (string, error) {
 	b, err := json.Marshal(jsonable)
 	if err != nil {
