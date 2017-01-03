@@ -7,6 +7,7 @@ import (
 
 var s *Server
 var db *Database
+var movieDB *Database
 
 func TestMain(m *testing.M) {
 	// setup
@@ -21,11 +22,18 @@ func TestMain(m *testing.M) {
 		os.Exit(2)
 	}
 
+	s.Delete("golang-movies")
+	movieDB, err = s.Create("golang-movies")
+	if err != nil {
+		os.Exit(2)
+	}
+
 	// run all the tests
 	code := m.Run()
 
 	// tear down
 	s.Delete("golang-tests")
+	s.Delete("golang-movies")
 	os.Exit(code)
 }
 
