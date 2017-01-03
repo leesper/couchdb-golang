@@ -521,6 +521,20 @@ func parseData(data []byte) (map[string]interface{}, error) {
 	return result, nil
 }
 
+func parseRaw(data []byte) (map[string]*json.RawMessage, error) {
+	result := map[string]*json.RawMessage{}
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return result, err
+	}
+	if _, ok := result["error"]; ok {
+		var reason string
+		json.Unmarshal(*result["reason"], &reason)
+		return result, errors.New(reason)
+	}
+	return result, nil
+}
+
 // GenerateUUID returns a random 128-bit UUID
 func GenerateUUID() string {
 	b := make([]byte, 16)
@@ -601,20 +615,70 @@ func (d *Database) Cleanup() error {
 }
 
 // Query returns documents using a conditional selector statement in Golang.
+// selector: A filter string declaring which documents to return, formatted as a Golang statement.
 // fields: Specifying which fields to be returned, if passing nil the entire
 // is returned, no automatic inclusion of _id or other metadata fields.
-// selector: A filter string declaring which documents to return, formatted as a Golang statement.
 // sorts: How to order the documents returned, formatted as ["desc(fieldName1)", "desc(fieldName2)"]
 // or ["fieldNameA", "fieldNameB"] of which "asc" is used by default, passing nil to disable ordering.
 // limit: Maximum number of results returned, passing nil to use default value(25).
 // skip: Skip the first 'n' results, where 'n' is the number specified, passing nil for no-skip.
 // index: Instruct a query to use a specific index, specified either as "<design_document>" or
 // ["<design_document>", "<index_name>"], passing nil to use primary index(_all_docs) by default.
-func (d *Database) Query(fields []string, selector string, sorts []string, limit, skip, index interface{}) {
+func (d *Database) Query(fields []string, selector string, sorts []string, limit, skip, index interface{}) ([]map[string]interface{}, error) {
+	selectorJSON, err := parseSelectorSyntax(selector)
+	if err != nil {
+		return nil, err
+	}
+	find := map[string]interface{}{
+		"selector": selectorJSON,
+	}
+
+	if limitVal, ok := limit.(int); ok {
+		find["limit"] = limitVal
+	}
+
+	if skipVal, ok := skip.(int); ok {
+		find["skip"] = skipVal
+	}
+
+	if sorts != nil {
+		sortsJSON, err := parseSortSyntax(sorts)
+		if err != nil {
+			return nil, err
+		}
+		find["sort"] = sortsJSON
+	}
+
+	if fields != nil {
+		find["fields"] = fields
+	}
+
+	if index != nil {
+		find["use_index"] = index
+	}
+
+	return d.QueryJSON(find)
 }
 
 // QueryJSON returns documents using a declarative JSON querying syntax.
-func (d *Database) QueryJSON(jsonQuery map[string]interface{}) {}
+func (d *Database) QueryJSON(jsonQuery map[string]interface{}) ([]map[string]interface{}, error) {
+	_, data, err := d.resource.PostJSON("_find", nil, jsonQuery, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := parseRaw(data)
+	if err != nil {
+		return nil, err
+	}
+
+	docs := []map[string]interface{}{}
+	err = json.Unmarshal(*result["docs"], &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
+}
 
 // parseSelectorSyntax returns a map representing the selector JSON struct.
 func parseSelectorSyntax(selector string) (interface{}, error) {
@@ -1138,4 +1202,60 @@ func beautifulJSONString(jsonable interface{}) (string, error) {
 		return "", err
 	}
 	return out.String(), nil
+}
+
+// PutIndex creates a new index in database.
+// ddoc: optional, name of the design document in which the index will be created.
+// By default each index will be created in its own design document. Indexes can be
+// grouped into design documents for efficiency. However a change to one index
+// in a design document will invalidate all other indexes in the same document.
+// name: optional, name of the index. A name generated automatically if not provided.
+func (d *Database) PutIndex(fields []string, ddoc, name string) (string, string, error) {
+	var design, index string
+	if len(fields) == 0 {
+		return design, index, errors.New("fields cannot be empty")
+	}
+
+	indexJSON := map[string]interface{}{}
+	indexJSON["index"] = map[string]interface{}{
+		"fields": fields,
+	}
+
+	if len(ddoc) > 0 {
+		indexJSON["ddoc"] = ddoc
+	}
+
+	if len(name) > 0 {
+		indexJSON["name"] = name
+	}
+
+	_, data, err := d.resource.PostJSON("_index", nil, indexJSON, nil)
+	if err != nil {
+		return design, index, err
+	}
+
+	result, err := parseData(data)
+	if err != nil {
+		return design, index, err
+	}
+	design = result["id"].(string)
+	index = result["name"].(string)
+
+	return design, name, nil
+}
+
+// GetIndex gets all indexes created in database.
+func (d *Database) GetIndex() (map[string]interface{}, error) {
+	_, data, err := d.resource.GetJSON("_index", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return parseData(data)
+}
+
+// DeleteIndex deletes index in database.
+func (d *Database) DeleteIndex(ddoc, name string) error {
+	indexRes := docResource(d.resource, fmt.Sprintf("_index/%s/json/%s", ddoc, name))
+	_, _, err := indexRes.DeleteJSON("", nil, nil)
+	return err
 }
