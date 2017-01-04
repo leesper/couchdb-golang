@@ -737,16 +737,16 @@ func parseSortSyntax(sorts []string) (interface{}, error) {
 func parseAST(expr ast.Expr) (interface{}, error) {
 	switch expr := expr.(type) {
 	case *ast.BinaryExpr:
-		fmt.Println("BinaryExpr", expr)
+		// fmt.Println("BinaryExpr", expr)
 		return parseBinary(expr.Op, expr.X, expr.Y)
 	case *ast.UnaryExpr:
-		fmt.Println("UnaryExpr", expr)
+		// fmt.Println("UnaryExpr", expr)
 		return parseUnary(expr.Op, expr.X)
 	case *ast.CallExpr:
-		fmt.Println("CallExpr", expr, expr.Fun, expr.Args)
+		// fmt.Println("CallExpr", expr, expr.Fun, expr.Args)
 		return parseFuncCall(expr.Fun, expr.Args)
 	case *ast.Ident:
-		fmt.Println("Ident", expr)
+		// fmt.Println("Ident", expr)
 		switch expr.Name {
 		case "nil": // for nil value such as _id > nil
 			return nil, nil
@@ -758,7 +758,7 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 			return expr.Name, nil
 		}
 	case *ast.BasicLit:
-		fmt.Println("BasicLit", expr)
+		// fmt.Println("BasicLit", expr)
 		switch expr.Kind {
 		case token.INT:
 			intVal, err := strconv.Atoi(expr.Value)
@@ -778,7 +778,7 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 			return nil, fmt.Errorf("token type %s not supported", expr.Kind.String())
 		}
 	case *ast.SelectorExpr:
-		fmt.Println("SelectorExpr", expr.X, expr.Sel)
+		// fmt.Println("SelectorExpr", expr.X, expr.Sel)
 		xExpr, err := parseAST(expr.X)
 		if err != nil {
 			return nil, err

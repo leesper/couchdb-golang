@@ -1,7 +1,8 @@
 package couchdb
 
 import (
-	"fmt"
+	"encoding/json"
+	"reflect"
 	"testing"
 )
 
@@ -753,70 +754,139 @@ import (
 // }
 
 // TODO adding new apis for mango query engine
-func TestQuery(t *testing.T) {
-	// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004 && director == "Dave Willis"`)
-	// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004`)
-	// result, err := parseSelectorSyntax(`year == 2004`)
-	// result, err := parseSelectorSyntax(`year >= 1990 && (director == "George Lucas" || director == "Steven Spielberg")`)
-	// result, err := parseSelectorSyntax(`director == "George Lucas" || director == "Steven Spielberg"`)
-	// result, err := parseSelectorSyntax(`year >= 1900 && year <= 2000 && nor(year == 1990, year == 1989, year == 1997)`)
-	// result, err := parseSelectorSyntax("year >= 1990 && year <= 1910")
-	// result, err := parseSelectorSyntax(`_id > nil && all(genre, []string{"Comedy", "Short"})`)
-	// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Comedy" || genre == "Short")`)
-	// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Short" || score >= 8)`)
-	// result, err := parseSelectorSyntax(`exists(director, true)`)
-	// result, err := parseSelectorSyntax(`typeof(genre, "array")`)
-	// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
-	// result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
-	// result, err := parseSelectorSyntax(`size(genre, 2)`)
-	result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
-	// result, err := parseSelectorSyntax(`regex(title, "^A")`)
-	// result, err := parseSortSyntax([]string{"fieldNameA", "fieldNameB"})
-	// result, err := parseSortSyntax([]string{"fieldNameA.subFieldA", "fieldNameB.subFieldB"})
-	// result, err := parseSortSyntax([]string{"desc(fieldName1)", "asc(fieldName2)"})
-	// result, err := parseSortSyntax([]string{"desc(fieldName1.subField1)", "asc(fieldName2.subField2)"})
+// func TestQuery(t *testing.T) {
+// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004 && director == "Dave Willis"`)
+// result, err := parseSelectorSyntax(`title == "Spacecataz" && year == 2004`)
+// result, err := parseSelectorSyntax(`year == 2004`)
+// result, err := parseSelectorSyntax(`year >= 1990 && (director == "George Lucas" || director == "Steven Spielberg")`)
+// result, err := parseSelectorSyntax(`director == "George Lucas" || director == "Steven Spielberg"`)
+// result, err := parseSelectorSyntax(`year >= 1900 && year <= 2000 && nor(year == 1990, year == 1989, year == 1997)`)
+// result, err := parseSelectorSyntax("year >= 1990 && year <= 1910")
+// result, err := parseSelectorSyntax(`_id > nil && all(genre, []string{"Comedy", "Short"})`)
+// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Comedy" || genre == "Short")`)
+// result, err := parseSelectorSyntax(`_id > nil && any(genre, genre == "Horror" || genre == "Short" || score >= 8)`)
+// result, err := parseSelectorSyntax(`exists(director, true)`)
+// result, err := parseSelectorSyntax(`typeof(genre, "array")`)
+// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
+// result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
+// result, err := parseSelectorSyntax(`size(genre, 2)`)
+// result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
+// result, err := parseSelectorSyntax(`regex(title, "^A")`)
+// result, err := parseSortSyntax([]string{"fieldNameA", "fieldNameB"})
+// result, err := parseSortSyntax([]string{"fieldNameA.subFieldA", "fieldNameB.subFieldB"})
+// result, err := parseSortSyntax([]string{"desc(fieldName1)", "asc(fieldName2)"})
+// result, err := parseSortSyntax([]string{"desc(fieldName1.subField1)", "asc(fieldName2.subField2)"})
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	s, _ := beautifulJSONString(result)
+// 	fmt.Println(s)
+// }
+
+func TestQueryYearAndID(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `_id > nil && in(year, []int{2007, 2004})`, nil, nil, nil, nil)
 	if err != nil {
-		fmt.Println(err)
+		t.Error("db query error", err)
 	}
-	s, _ := beautifulJSONString(result)
-	fmt.Println(s)
+
+	var rawJSON = []byte(`
+	{
+	    "selector": {
+				"$and": [
+	        	{
+	            "_id": { "$gt": null }
+	        	},
+	        	{
+	            "year": {
+	              "$in": [2007, 2004]
+	          	}
+	        	}
+	    	]
+			}
+	}`)
+	queryMap := map[string]interface{}{}
+	err = json.Unmarshal(rawJSON, &queryMap)
+	if err != nil {
+		t.Error("json unmarshal error", err)
+	}
+
+	docsRaw, err := movieDB.QueryJSON(queryMap)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query year and id not equal")
+	}
 }
 
-// {
-//     "$and": [
-//         {
-//             "_id": { "$gt": null }
-//         },
-//         {
-//             "year": {
-//                 "$in": [2007, 2004]
-//             }
-//         }
-//     ]
-// }
-func TestQueryYearAndID(t *testing.T) {}
+func TestQueryYearOrDirector(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `year == 1989 && (director == "Ademir Kenovic" || director == "Dezs Garas")`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
 
-// {
-//     "year": 1989,
-//     "$or": [
-//         { "director": "Ademir Kenovic" },
-//         { "director": "Dezs Garas" }
-//     ]
-// }
-func TestQueryYearOrDirector(t *testing.T) {}
+	var rawJSON = []byte(`
+	{
+		"selector": {
+			"year": 1989,
+			"$or": [
+				{ "director": "Ademir Kenovic" },
+				{ "director": "Dezs Garas" }
+			]
+		}
+	}`)
+	queryMap := map[string]interface{}{}
+	err = json.Unmarshal(rawJSON, &queryMap)
+	if err != nil {
+		t.Error("json unmarshal error", err)
+	}
 
-// {
-//     "year": {
-//         "$gte": 1989
-//     },
-//     "year": {
-//         "$lte": 2006
-//     },
-//     "$not": {
-//         "year": 2004
-//     }
-// }
-func TestQueryYearGteLteNot(t *testing.T) {}
+	docsRaw, err := movieDB.QueryJSON(queryMap)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query year or director not equal")
+	}
+}
+
+func TestQueryYearGteLteNot(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `year >= 1989 && year <= 2006 && year != 2004`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
+
+	var rawJSON = []byte(`
+	{
+		"selector": {
+			"year": {
+	      "$gte": 1989
+	    },
+	    "year": {
+	      "$lte": 2006
+	    },
+	    "$not": {
+	      "year": 2004
+	    }
+		}
+	}`)
+	queryMap := map[string]interface{}{}
+	err = json.Unmarshal(rawJSON, &queryMap)
+	if err != nil {
+		t.Error("json unmarshal error", err)
+	}
+
+	docsRaw, err := movieDB.QueryJSON(queryMap)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query year gte lte not not equal")
+	}
+}
 
 // {
 //     "imdb.rating": {
