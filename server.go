@@ -263,11 +263,11 @@ func (s *Server) UUIDs(count int) ([]string, error) {
 
 // newResource returns an url string representing a resource under server.
 func (s *Server) newResource(resource string) string {
-	resourceUrl, err := s.resource.base.Parse(resource)
+	resourceURL, err := s.resource.base.Parse(resource)
 	if err != nil {
 		return ""
 	}
-	return resourceUrl.String()
+	return resourceURL.String()
 }
 
 // AddUser adds regular user in authentication database.
@@ -314,7 +314,7 @@ func (s *Server) Login(name, password string) (string, error) {
 	return token, err
 }
 
-// Verify regular user token
+// VerifyToken returns error if user's token is invalid.
 func (s *Server) VerifyToken(token string) error {
 	header := http.Header{}
 	header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
@@ -336,6 +336,6 @@ func (s *Server) RemoveUser(name string) error {
 	if err != nil {
 		return err
 	}
-	docId := "org.couchdb.user:" + name
-	return db.Delete(docId)
+	docID := "org.couchdb.user:" + name
+	return db.Delete(docID)
 }

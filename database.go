@@ -18,23 +18,24 @@ import (
 )
 
 const (
-	DEFAULT_BASE_URL = "http://localhost:5984"
+	// DefaultBaseURL is the default address of CouchDB server.
+	DefaultBaseURL = "http://localhost:5984"
 )
 
 // getDefaultCouchDBURL returns the default CouchDB server url.
 func getDefaultCouchDBURL() string {
-	var couchdbUrlEnviron string
-	for _, couchdbUrlEnviron = range os.Environ() {
-		if strings.HasPrefix(couchdbUrlEnviron, "COUCHDB_URL") {
+	var couchdbURLEnviron string
+	for _, couchdbURLEnviron = range os.Environ() {
+		if strings.HasPrefix(couchdbURLEnviron, "COUCHDB_URL") {
 			break
 		}
 	}
-	if len(couchdbUrlEnviron) == 0 {
-		couchdbUrlEnviron = DEFAULT_BASE_URL
+	if len(couchdbURLEnviron) == 0 {
+		couchdbURLEnviron = DefaultBaseURL
 	} else {
-		couchdbUrlEnviron = strings.Split(couchdbUrlEnviron, "=")[1]
+		couchdbURLEnviron = strings.Split(couchdbURLEnviron, "=")[1]
 	}
-	return couchdbUrlEnviron
+	return couchdbURLEnviron
 }
 
 // Database represents a CouchDB database instance.
@@ -44,22 +45,22 @@ type Database struct {
 
 // NewDatabase returns a CouchDB database instance.
 func NewDatabase(urlStr string) (*Database, error) {
-	var dbUrlStr string
+	var dbURLStr string
 	if !strings.HasPrefix(urlStr, "http") {
 		base, err := url.Parse(getDefaultCouchDBURL())
 		if err != nil {
 			return nil, err
 		}
-		dbUrl, err := base.Parse(urlStr)
+		dbURL, err := base.Parse(urlStr)
 		if err != nil {
 			return nil, err
 		}
-		dbUrlStr = dbUrl.String()
+		dbURLStr = dbURL.String()
 	} else {
-		dbUrlStr = urlStr
+		dbURLStr = urlStr
 	}
 
-	res, err := NewResource(dbUrlStr, nil)
+	res, err := NewResource(dbURLStr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func newDatabase(res *Resource) (*Database, error) {
 	}, nil
 }
 
-// Aavailable returns true if the database is good to go.
+// Available returns true if the database is good to go.
 func (d *Database) Available() bool {
 	_, _, err := d.resource.Head("", nil, nil)
 	return err == nil
@@ -199,13 +200,14 @@ func (d *Database) Contains(docid string) error {
 	return err
 }
 
-// Update performs a bulk update or creation of the given documents in a single HTTP request.
-// It returns a 3-tuple (id, rev, error)
+// UpdateResult represents result of an update.
 type UpdateResult struct {
 	id, rev string
 	err     error
 }
 
+// Update performs a bulk update or creation of the given documents in a single HTTP request.
+// It returns a 3-tuple (id, rev, error)
 func (d *Database) Update(docs []map[string]interface{}, options map[string]interface{}) ([]UpdateResult, error) {
 	results := make([]UpdateResult, len(docs))
 	body := map[string]interface{}{}
@@ -347,6 +349,9 @@ func (d *Database) Revisions(docid string, options url.Values) ([]map[string]int
 	}
 	var revsMap map[string]interface{}
 	err = json.Unmarshal(*jsonMap["_revisions"], &revsMap)
+	if err != nil {
+		return nil, err
+	}
 	startRev := int(revsMap["start"].(float64))
 	val := reflect.ValueOf(revsMap["ids"])
 	if options == nil {
@@ -547,11 +552,13 @@ func GenerateUUID() string {
 	return uuid
 }
 
+// SetSecurity sets the security object for the given database.
 func (d *Database) SetSecurity(securityDoc map[string]interface{}) error {
 	_, _, err := d.resource.PutJSON("_security", nil, securityDoc, nil)
 	return err
 }
 
+// GetSecurity returns the current security object from the given database.
 func (d *Database) GetSecurity() (map[string]interface{}, error) {
 	_, data, err := d.resource.GetJSON("_security", nil, nil)
 	if err != nil {
@@ -750,7 +757,6 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 		default:
 			return expr.Name, nil
 		}
-		panic("never reached")
 	case *ast.BasicLit:
 		fmt.Println("BasicLit", expr)
 		switch expr.Kind {
@@ -800,7 +806,6 @@ func parseAST(expr ast.Expr) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("expressions other than unary, binary and function call are not allowed %v", expr)
 	}
-	panic("never reached")
 }
 
 // parseBinary parses and returns a JSON struct according to
@@ -878,7 +883,7 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 	switch functionName {
 	case "nor":
 		if len(args) < 1 {
-			return nil, fmt.Errorf("function nor(exprs...) need at least 1 arguments, not $d", len(args))
+			return nil, fmt.Errorf("function nor(exprs...) need at least 1 arguments, not %d", len(args))
 		}
 
 		selectors := make([]interface{}, len(args))
@@ -928,6 +933,9 @@ func parseFuncCall(funcExpr ast.Expr, args []ast.Expr) (interface{}, error) {
 		}
 
 		anyExpr, err := parseAST(args[1])
+		if err != nil {
+			return nil, err
+		}
 		anyExpr, err = removeFieldKey(fieldExpr.(string), anyExpr)
 		if err != nil {
 			return nil, err
@@ -1241,7 +1249,7 @@ func (d *Database) PutIndex(fields []string, ddoc, name string) (string, string,
 	design = result["id"].(string)
 	index = result["name"].(string)
 
-	return design, name, nil
+	return design, index, nil
 }
 
 // GetIndex gets all indexes created in database.

@@ -1,8 +1,7 @@
-// CouchDB resource
+// Package couchdb provides components to work with CouchDB 2.x with Go.
 //
-// This is the low-level wrapper functions of HTTP methods
-//
-// Used for communicating with CouchDB Server
+// resource is the low-level wrapper functions of HTTP methods
+// used for communicating with CouchDB Server.
 package couchdb
 
 import (
@@ -21,19 +20,32 @@ import (
 var (
 	httpClient *http.Client
 
-	ErrNotModified                error = errors.New("status 304 - not modified")
-	ErrBadRequest                 error = errors.New("status 400 - bad request")
-	ErrUnauthorized               error = errors.New("status 401 - unauthorized")
-	ErrForbidden                  error = errors.New("status 403 - forbidden")
-	ErrNotFound                   error = errors.New("status 404 - not found")
-	ErrResourceNotAllowed         error = errors.New("status 405 - resource not allowed")
-	ErrNotAcceptable              error = errors.New("status 406 - not acceptable")
-	ErrConflict                   error = errors.New("status 409 - conflict")
-	ErrPreconditionFailed         error = errors.New("status 412 - precondition failed")
-	ErrBadContentType             error = errors.New("status 415 - bad content type")
-	ErrRequestRangeNotSatisfiable error = errors.New("status 416 - requested range not satisfiable")
-	ErrExpectationFailed          error = errors.New("status 417 - expectation failed")
-	ErrInternalServerError        error = errors.New("status 500 - internal server error")
+	// ErrNotModified for HTTP status code 304
+	ErrNotModified = errors.New("status 304 - not modified")
+	// ErrBadRequest for HTTP status code 400
+	ErrBadRequest = errors.New("status 400 - bad request")
+	// ErrUnauthorized for HTTP status code 401
+	ErrUnauthorized = errors.New("status 401 - unauthorized")
+	// ErrForbidden for HTTP status code 403
+	ErrForbidden = errors.New("status 403 - forbidden")
+	// ErrNotFound for HTTP status code 404
+	ErrNotFound = errors.New("status 404 - not found")
+	// ErrResourceNotAllowed for HTTP status code 405
+	ErrResourceNotAllowed = errors.New("status 405 - resource not allowed")
+	// ErrNotAcceptable for HTTP status code 406
+	ErrNotAcceptable = errors.New("status 406 - not acceptable")
+	// ErrConflict for HTTP status code 409
+	ErrConflict = errors.New("status 409 - conflict")
+	// ErrPreconditionFailed for HTTP status code 412
+	ErrPreconditionFailed = errors.New("status 412 - precondition failed")
+	// ErrBadContentType for HTTP status code 415
+	ErrBadContentType = errors.New("status 415 - bad content type")
+	// ErrRequestRangeNotSatisfiable for HTTP status code 416
+	ErrRequestRangeNotSatisfiable = errors.New("status 416 - requested range not satisfiable")
+	// ErrExpectationFailed for HTTP status code 417
+	ErrExpectationFailed = errors.New("status 417 - expectation failed")
+	// ErrInternalServerError for HTTP status code 500
+	ErrInternalServerError = errors.New("status 500 - internal server error")
 
 	statusErrMap = map[int]error{
 		304: ErrNotModified,
@@ -97,6 +109,7 @@ func combine(base *url.URL, resPath string) (*url.URL, error) {
 	return u, err
 }
 
+// NewResourceWithURL returns newly created *Resource combined with resource string.
 func (r *Resource) NewResourceWithURL(resStr string) (*Resource, error) {
 	u, err := combine(r.base, resStr)
 	if err != nil {
@@ -257,7 +270,7 @@ func setDefault(header *http.Header, key, value string) {
 // updateHeader updates existing header with new values
 func updateHeader(header *http.Header, extra *http.Header) {
 	if header != nil && extra != nil {
-		for k, _ := range *extra {
+		for k := range *extra {
 			header.Set(k, extra.Get(k))
 		}
 	}

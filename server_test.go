@@ -5,9 +5,44 @@ import (
 	"testing"
 )
 
-var s *Server
-var db *Database
-var movieDB *Database
+var (
+	s       *Server
+	db      *Database
+	movieDB *Database
+	movies  = []map[string]interface{}{
+		{
+			"_id":     "976059",
+			"_rev":    "1-0ac57ca6eeb3dfc5f7a9196010385e7d",
+			"title":   "Spacecataz",
+			"year":    2004,
+			"rating":  nil,
+			"runtime": "10 min",
+			"genre": []string{
+				"Animation",
+				"Short",
+				"Comedy",
+				"Sci-Fi",
+			},
+			"director": "Dave Willis",
+			"writer": []string{
+				"Matt Maiellaro",
+				"Dave Willis",
+			},
+			"cast": []string{
+				"Dave Willis",
+				"Matt Maiellaro",
+				"Andy Merrill",
+				"Mike Schatz",
+			},
+			"poster": nil,
+			"imdb": map[string]interface{}{
+				"rating": 8,
+				"votes":  130,
+				"id":     "tt0976059",
+			},
+		},
+	}
+)
 
 func TestMain(m *testing.M) {
 	// setup
