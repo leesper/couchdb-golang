@@ -664,12 +664,21 @@ func (d *Database) Query(fields []string, selector string, sorts []string, limit
 		find["use_index"] = index
 	}
 
-	return d.QueryJSON(find)
+	return d.queryJSON(find)
 }
 
 // QueryJSON returns documents using a declarative JSON querying syntax.
-func (d *Database) QueryJSON(jsonQuery map[string]interface{}) ([]map[string]interface{}, error) {
-	_, data, err := d.resource.PostJSON("_find", nil, jsonQuery, nil)
+func (d *Database) QueryJSON(query string) ([]map[string]interface{}, error) {
+	queryMap := map[string]interface{}{}
+	err := json.Unmarshal([]byte(query), &queryMap)
+	if err != nil {
+		return nil, err
+	}
+	return d.queryJSON(queryMap)
+}
+
+func (d *Database) queryJSON(queryMap map[string]interface{}) ([]map[string]interface{}, error) {
+	_, data, err := d.resource.PostJSON("_find", nil, queryMap, nil)
 	if err != nil {
 		return nil, err
 	}
