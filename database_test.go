@@ -769,20 +769,189 @@ func TestQuery(t *testing.T) {
 	// result, err := parseSelectorSyntax(`in(director, []string{"Mike Portnoy", "Vitali Kanevsky"})`)
 	// result, err := parseSelectorSyntax(`nin(year, []int{1990, 1992, 1998})`)
 	// result, err := parseSelectorSyntax(`size(genre, 2)`)
-	// result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
+	result, err := parseSelectorSyntax(`mod(year, 2, 1)`)
 	// result, err := parseSelectorSyntax(`regex(title, "^A")`)
 	// result, err := parseSortSyntax([]string{"fieldNameA", "fieldNameB"})
 	// result, err := parseSortSyntax([]string{"fieldNameA.subFieldA", "fieldNameB.subFieldB"})
 	// result, err := parseSortSyntax([]string{"desc(fieldName1)", "asc(fieldName2)"})
-	result, err := parseSortSyntax([]string{"desc(fieldName1.subField1)", "asc(fieldName2.subField2)"})
+	// result, err := parseSortSyntax([]string{"desc(fieldName1.subField1)", "asc(fieldName2.subField2)"})
 	if err != nil {
 		fmt.Println(err)
 	}
 	s, _ := beautifulJSONString(result)
-	fmt.Println(`year >= 1990 && (director == "George Lucas" || director == "Steven Spielberg")`)
 	fmt.Println(s)
 }
 
-func TestQueryFieldsSelector(t *testing.T) {}
-func TestQuerySkipSortLimit(t *testing.T)  {}
-func TestQueryUseIndex(t *testing.T)       {}
+// {
+//     "$and": [
+//         {
+//             "_id": { "$gt": null }
+//         },
+//         {
+//             "year": {
+//                 "$in": [2007, 2004]
+//             }
+//         }
+//     ]
+// }
+func TestQueryYearAndID(t *testing.T) {}
+
+// {
+//     "year": 1989,
+//     "$or": [
+//         { "director": "Ademir Kenovic" },
+//         { "director": "Dezs Garas" }
+//     ]
+// }
+func TestQueryYearOrDirector(t *testing.T) {}
+
+// {
+//     "year": {
+//         "$gte": 1989
+//     },
+//     "year": {
+//         "$lte": 2006
+//     },
+//     "$not": {
+//         "year": 2004
+//     }
+// }
+func TestQueryYearGteLteNot(t *testing.T) {}
+
+// {
+//     "imdb.rating": {
+//         "$gte": 6
+//     },
+//     "imdb.rating": {
+//         "$lte": 9
+//     },
+//     "$nor": [
+//         { "imdb.rating": 8.1 },
+//         { "imdb.rating": 8.2 },
+//         { "imdb.rating": 7.8 }
+//     ]
+// }
+func TestQueryIMDBRatingNor(t *testing.T) {}
+
+// {
+//     "_id": {
+//         "$gt": null
+//     },
+//     "genre": {
+//         "$all": ["Comedy","Short"]
+//     }
+// }
+func TestQueryGenreAll(t *testing.T) {}
+
+// {
+//     "_id": { "$gt": null },
+//     "genre": {
+//         "$elemMatch": {
+//             "$eq": "Horror"
+//         }
+//     }
+// }
+func TestQueryGenreElemMatch(t *testing.T) {}
+
+// {
+//     "selector": {
+//         "afieldname": {"$regex": "^A"}
+//     }
+// }
+func TestQueryRegex(t *testing.T) {}
+
+// {
+//     "$and": [
+//         {
+//             "_id": { "$gt": null }
+//         },
+//         {
+//             "year": {
+//                 "$nin": [1989, 1990]
+//             }
+//         }
+//     ]
+// }
+func TestQueryYearIDNin(t *testing.T) {}
+
+// {
+//     "$and": [
+//         {
+// 	    "poster": {
+// 	        "$type": "string"
+// 	    }
+// 	},
+// 	{
+// 	    "runtime": {
+//     	        "$exists": true
+// 	    }
+// 	}
+//     ]
+// }
+func TestQueryTypeAndExists(t *testing.T) {}
+
+// {
+//     "$and": [
+//         {
+// 	    "writer": {
+// 		"$size": 2
+// 	    }
+// 	},
+// 	{
+// 	    "year": {
+// 		"$mod": [2, 0]
+// 	    }
+// 	}
+//     ]
+// }
+func TestQuerySizeAndMod(t *testing.T) {}
+
+// {
+//     "$or": [
+//         {
+// 	    "rating": {
+// 		"$ne": null
+// 	    }
+// 	},
+// 	{
+// 	    "year": {
+//   		"$lt": 2000
+// 	    }
+// 	}
+//     ]
+// }
+func TestRatingOrYear(t *testing.T) {}
+
+// {
+//     "selector": {
+//         "year": {"$gt": 1989}
+//     },
+//     "fields": ["_id", "_rev", "year", "title"],
+//     "sort": [{"year": "asc"}],
+//     "limit": 5,
+//     "skip": 2,
+// }
+func TestQuerySortLimitSkip(t *testing.T) {}
+
+// {
+//     "selector": {
+//         "year": {"$gt": 1989}
+//     },
+//     "fields": ["_id", "_rev", "year", "title"],
+//     "sort": [{"imdb.rating": "desc"}, {"imdb.votes": "desc"}],
+// }
+func TestQueryDoubleSort(t *testing.T) {}
+
+func TestIndexCRUD(t *testing.T) {}
+
+// {
+//     "selector": {
+//         "year": {"$gt": 1989}
+//     },
+//     "fields": ["_id", "_rev", "year", "title"],
+//     "sort": [{"year": "asc"}],
+//     "limit": 5,
+//     "skip": 2,
+//	   "use_index": xxx
+// }
+func TestQueryUseIndex(t *testing.T) {}

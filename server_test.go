@@ -1,6 +1,7 @@
 package couchdb
 
 import (
+	"log"
 	"os"
 	"testing"
 )
@@ -12,7 +13,6 @@ var (
 	movies  = []map[string]interface{}{
 		{
 			"_id":     "976059",
-			"_rev":    "1-0ac57ca6eeb3dfc5f7a9196010385e7d",
 			"title":   "Spacecataz",
 			"year":    2004,
 			"rating":  nil,
@@ -41,6 +41,248 @@ var (
 				"id":     "tt0976059",
 			},
 		},
+		{
+			"_id":     "976197",
+			"title":   "American Psyche",
+			"year":    2007,
+			"rating":  nil,
+			"runtime": "55 min",
+			"genre": []string{
+				"Documentary",
+			},
+			"director": "Paul van den Boom",
+			"writer": []string{
+				"Paul van den Boom (creator)",
+				"Franois Le Goarant de Tromelin (creator)",
+			},
+			"cast": []string{
+				"Katherine J. Eakin",
+				"Mahnaz M. Shabbir",
+				"Rene Doria",
+				"Peter Koper",
+			},
+			"poster": "http://ia.media-imdb.com/images/M/MV5BMTM3NTg5NDE2N15BMl5BanBnXkFtZTcwODI0MjM1MQ@@._V1_SX300.jpg",
+			"imdb": map[string]interface{}{
+				"rating": 8.2,
+				"votes":  77,
+				"id":     "tt0976197",
+			},
+		},
+		{
+			"_id":     "976221",
+			"title":   "Voliminal: Inside the Nine",
+			"year":    2006,
+			"rating":  nil,
+			"runtime": "N/A",
+			"genre": []string{
+				"Documentary",
+			},
+			"director": "Shawn Crahan",
+			"writer":   nil,
+			"cast": []string{
+				"Shawn Crahan",
+				"Chris Fehn",
+				"Paul Gray",
+				"Craig Jones",
+			},
+			"poster": nil,
+			"imdb": map[string]interface{}{
+				"rating": 8.1,
+				"votes":  125,
+				"id":     "tt0976221",
+			},
+		},
+		{
+			"_id":     "97628",
+			"title":   "The Johnstown Flood",
+			"year":    1989,
+			"rating":  nil,
+			"runtime": "26 min",
+			"genre": []string{
+				"Documentary",
+				"Short",
+			},
+			"director": "Charles Guggenheim",
+			"writer": []string{
+				"Charles Guggenheim",
+			},
+			"cast": []string{
+				"Len Cariou",
+				"Elam Bender",
+				"Randy Bender",
+				"Clarita Berger",
+			},
+			"poster": "http://ia.media-imdb.com/images/M/MV5BMTc2NTc3MzQ5MF5BMl5BanBnXkFtZTcwMjU5ODkwNg@@._V1_SX300.jpg",
+			"imdb": map[string]interface{}{
+				"rating": 7.8,
+				"votes":  75,
+				"id":     "tt0097628",
+			},
+		},
+		{
+			"_id":     "97661",
+			"title":   "Gundam 0080: A War in the Pocket",
+			"year":    1989,
+			"rating":  "NOT RATED",
+			"runtime": "N/A",
+			"genre": []string{
+				"Animation",
+				"Action",
+				"Drama",
+			},
+			"director": "N/A",
+			"writer":   nil,
+			"cast": []string{
+				"Daisuke Namikawa",
+				"Kji Tsujitani",
+				"Megumi Hayashibara",
+				"Brianne Brozey",
+			},
+			"poster": "http://ia.media-imdb.com/images/M/MV5BMTk3NjU2ODQ1Ml5BMl5BanBnXkFtZTcwNzY4MzYyMQ@@._V1_SX300.jpg",
+			"imdb": map[string]interface{}{
+				"rating": 8,
+				"votes":  475,
+				"id":     "tt0097661",
+			},
+		},
+		{
+			"_id":     "97690",
+			"title":   "Kuduz",
+			"year":    1989,
+			"rating":  nil,
+			"runtime": "N/A",
+			"genre": []string{
+				"Drama",
+			},
+			"director": "Ademir Kenovic",
+			"writer": []string{
+				"Ademir Kenovic",
+				"Abdulah Sidran",
+			},
+			"cast": []string{
+				"Slobodan Custic",
+				"Snezana Bogdanovic",
+				"Bozidar Bunjevac",
+				"Branko Djuric",
+			},
+			"poster": nil,
+			"imdb": map[string]interface{}{
+				"rating": 8.1,
+				"votes":  342,
+				"id":     "tt0097690",
+			},
+		},
+		{
+			"_id":     "977224",
+			"title":   "Mere Oblivion",
+			"year":    2007,
+			"rating":  nil,
+			"runtime": "N/A",
+			"genre": []string{
+				"Short",
+				"Comedy",
+			},
+			"director": "Burleigh Smith",
+			"writer": []string{
+				"Burleigh Smith",
+			},
+			"cast": []string{
+				"Burleigh Smith",
+				"Elizabeth Caiacob",
+				"Michael Su",
+				"Kate Ritchie",
+			},
+			"poster": nil,
+			"imdb": map[string]interface{}{
+				"rating": 7.9,
+				"votes":  284,
+				"id":     "tt0977224",
+			},
+		},
+		{
+			"_id":     "97727",
+			"title":   "A legnyanya",
+			"year":    1989,
+			"rating":  nil,
+			"runtime": "80 min",
+			"genre": []string{
+				"Comedy",
+			},
+			"director": "Dezs Garas",
+			"writer": []string{
+				"Dezs Garas (screenplay)",
+				"Gyrgy Schwajda",
+			},
+			"cast": []string{
+				"Ferenc Kllai",
+				"Kroly Eperjes",
+				"Judit Pogny",
+				"Dezs Garas",
+			},
+			"poster": nil,
+			"imdb": map[string]interface{}{
+				"rating": 7.8,
+				"votes":  786,
+				"id":     "tt0097727",
+			},
+		},
+		{
+			"_id":     "97757",
+			"title":   "The Little Mermaid",
+			"year":    1989,
+			"rating":  "G",
+			"runtime": "83 min",
+			"genre": []string{
+				"Animation",
+				"Family",
+				"Fantasy",
+			},
+			"director": "Ron Clements, John Musker",
+			"writer": []string{
+				"John Musker",
+				"Ron Clements",
+				"Hans Christian Andersen (fairy tale)",
+				"Howard Ashman (additional dialogue)",
+				"Gerrit Graham (additional dialogue)",
+				"Sam Graham (additional dialogue)",
+				"Chris Hubbell (additional dialogue)",
+			},
+			"cast": []string{
+				"Rene Auberjonois",
+				"Christopher Daniel Barnes",
+				"Jodi Benson",
+				"Pat Carroll",
+			},
+			"poster": "http://ia.media-imdb.com/images/M/MV5BNTAxMzY0MjI1Nl5BMl5BanBnXkFtZTgwMTU2NTYxMTE@._V1_SX300.jpg",
+			"imdb": map[string]interface{}{
+				"rating": 7.6,
+				"votes":  138,
+				"id":     "tt0097757",
+			},
+		},
+		{
+			"_id":     "977654",
+			"title":   "Hijos de la guerra",
+			"year":    2007,
+			"rating":  nil,
+			"runtime": "90 min",
+			"genre": []string{
+				"Documentary",
+			},
+			"director": "Alexandre Fuchs, Samantha Belmont, Jeremy Fourteau",
+			"writer": []string{
+				"Jeremy Fourteau (story)",
+				"Jeff Zimbalist",
+				"Michael Zimbalist",
+			},
+			"cast":   nil,
+			"poster": "http://ia.media-imdb.com/images/M/MV5BMTIwMzUyMjcwN15BMl5BanBnXkFtZTcwNzIyMzU0MQ@@._V1_SX300.jpg",
+			"imdb": map[string]interface{}{
+				"rating": 8.1,
+				"votes":  80,
+				"id":     "tt0977654",
+			},
+		},
 	}
 )
 
@@ -60,6 +302,11 @@ func TestMain(m *testing.M) {
 	s.Delete("golang-movies")
 	movieDB, err = s.Create("golang-movies")
 	if err != nil {
+		log.Println("create error", err)
+		os.Exit(2)
+	}
+	_, err = movieDB.Update(movies, nil)
+	if err != nil {
 		os.Exit(2)
 	}
 
@@ -68,7 +315,7 @@ func TestMain(m *testing.M) {
 
 	// tear down
 	s.Delete("golang-tests")
-	s.Delete("golang-movies")
+	// s.Delete("golang-movies")
 	os.Exit(code)
 }
 
