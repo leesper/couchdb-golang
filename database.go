@@ -602,11 +602,11 @@ func docResource(res *Resource, docID string) *Resource {
 		return res
 	}
 
-	var docRes *Resource
+	docRes := res
 	if docID[:1] == "_" {
 		paths := strings.SplitN(docID, "/", 2)
 		for _, p := range paths {
-			docRes, _ = res.NewResourceWithURL(p)
+			docRes, _ = docRes.NewResourceWithURL(p)
 		}
 		return docRes
 	}
@@ -1222,20 +1222,26 @@ func beautifulJSONString(jsonable interface{}) (string, error) {
 }
 
 // PutIndex creates a new index in database.
+// indexFields: a JSON array of field names following the sort syntax.
 // ddoc: optional, name of the design document in which the index will be created.
 // By default each index will be created in its own design document. Indexes can be
 // grouped into design documents for efficiency. However a change to one index
 // in a design document will invalidate all other indexes in the same document.
 // name: optional, name of the index. A name generated automatically if not provided.
-func (d *Database) PutIndex(fields []string, ddoc, name string) (string, string, error) {
+func (d *Database) PutIndex(indexFields []string, ddoc, name string) (string, string, error) {
 	var design, index string
-	if len(fields) == 0 {
-		return design, index, errors.New("fields cannot be empty")
+	if len(indexFields) == 0 {
+		return design, index, errors.New("index fields cannot be empty")
+	}
+
+	indexObjs, err := parseSortSyntax(indexFields)
+	if err != nil {
+		return design, index, err
 	}
 
 	indexJSON := map[string]interface{}{}
 	indexJSON["index"] = map[string]interface{}{
-		"fields": fields,
+		"fields": indexObjs,
 	}
 
 	if len(ddoc) > 0 {
@@ -1262,12 +1268,12 @@ func (d *Database) PutIndex(fields []string, ddoc, name string) (string, string,
 }
 
 // GetIndex gets all indexes created in database.
-func (d *Database) GetIndex() (map[string]interface{}, error) {
+func (d *Database) GetIndex() (map[string]*json.RawMessage, error) {
 	_, data, err := d.resource.GetJSON("_index", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return parseData(data)
+	return parseRaw(data)
 }
 
 // DeleteIndex deletes index in database.
