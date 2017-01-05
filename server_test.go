@@ -290,7 +290,7 @@ var (
 func TestMain(m *testing.M) {
 	// setup
 	var err error
-	server, err = NewServer("http://root:likejun@localhost:5984")
+	server, err = NewServer("http://localhost:5984")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -321,7 +321,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewServer(t *testing.T) {
-	testServer, err := NewServer("http://root:likejun@localhost:5984")
+	testServer, err := NewServer(DefaultBaseURL)
 	if err != nil {
 		t.Error(`new server error`, err)
 	}
@@ -332,7 +332,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestNewServerNoFullCommit(t *testing.T) {
-	testServer, err := NewServerNoFullCommit("http://root:likejun@localhost:5984")
+	testServer, err := NewServerNoFullCommit(DefaultBaseURL)
 	if err != nil {
 		t.Error(`new server full commit error`, err)
 	}

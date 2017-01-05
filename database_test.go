@@ -28,7 +28,7 @@ func TestNewDB(t *testing.T) {
 	newDB := "golang-newdb"
 	server.Create(newDB)
 	defer server.Delete(newDB)
-	dbNew, err := NewDatabase("http://root:likejun@localhost:5984/" + newDB)
+	dbNew, err := NewDatabase(DefaultBaseURL + newDB)
 	if err != nil {
 		t.Error(`new database error`, err)
 	}
@@ -150,7 +150,7 @@ func TestDatabaseName(t *testing.T) {
 }
 
 func TestDatabaseString(t *testing.T) {
-	if testsDB.String() != "Database http://root:likejun@localhost:5984/golang-tests" {
+	if testsDB.String() != "Database http://localhost:5984/golang-tests" {
 		t.Error(`db string invalid`, testsDB)
 	}
 }

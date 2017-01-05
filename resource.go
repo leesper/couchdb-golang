@@ -1,7 +1,3 @@
-// Package couchdb provides components to work with CouchDB 2.x with Go.
-//
-// resource is the low-level wrapper functions of HTTP methods
-// used for communicating with CouchDB Server.
 package couchdb
 
 import (
