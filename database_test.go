@@ -976,74 +976,157 @@ func TestQueryGenreElemMatch(t *testing.T) {
 	}
 }
 
-// {
-//     "selector": {
-//         "afieldname": {"$regex": "^A"}
-//     }
-// }
-func TestQueryRegex(t *testing.T) {}
+func TestQueryRegex(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `regex(director, "^D")`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
 
-// {
-//     "$and": [
-//         {
-//             "_id": { "$gt": null }
-//         },
-//         {
-//             "year": {
-//                 "$nin": [1989, 1990]
-//             }
-//         }
-//     ]
-// }
-func TestQueryYearIDNin(t *testing.T) {}
+	var rawJSON = `
+	{
+  	"selector": {
+    	"director": {"$regex": "^D"}
+		}
+	}`
+	docsRaw, err := movieDB.QueryJSON(rawJSON)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
 
-// {
-//     "$and": [
-//         {
-// 	    "poster": {
-// 	        "$type": "string"
-// 	    }
-// 	},
-// 	{
-// 	    "runtime": {
-//     	        "$exists": true
-// 	    }
-// 	}
-//     ]
-// }
-func TestQueryTypeAndExists(t *testing.T) {}
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query regex not equal")
+	}
+}
 
-// {
-//     "$and": [
-//         {
-// 	    "writer": {
-// 		"$size": 2
-// 	    }
-// 	},
-// 	{
-// 	    "year": {
-// 		"$mod": [2, 0]
-// 	    }
-// 	}
-//     ]
-// }
-func TestQuerySizeAndMod(t *testing.T) {}
+func TestQueryYearIDNin(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `_id > nil && nin(year, []int{1989, 1990})`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
 
-// {
-//     "$or": [
-//         {
-// 	    "rating": {
-// 		"$ne": null
-// 	    }
-// 	},
-// 	{
-// 	    "year": {
-//   		"$lt": 2000
-// 	    }
-// 	}
-//     ]
-// }
-func TestRatingOrYear(t *testing.T) {}
+	var rawJSON = `
+	{
+  	"selector": {
+    	"$and": [
+        {
+          "_id": { "$gt": null }
+        },
+        {
+          "year": {
+          	"$nin": [1989, 1990]
+          }
+        }
+    	]
+		}
+	}`
+	docsRaw, err := movieDB.QueryJSON(rawJSON)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query year id nin not equal")
+	}
+}
+
+func TestQueryTypeAndExists(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `typeof(poster, "string") && exists(runtime, true)`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
+
+	var rawJSON = `
+	{
+  	"selector": {
+    	"$and": [
+        {
+	    		"poster": {
+						"$type": "string"
+	    		}
+				},
+				{
+	    		"runtime": {
+						"$exists": true
+	    		}
+				}
+    	]
+		}
+	}`
+	docsRaw, err := movieDB.QueryJSON(rawJSON)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query type and exists not equal")
+	}
+}
+
+func TestQuerySizeAndMod(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, `size(writer, 2) && mod(year, 2, 0)`, nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
+
+	var rawJSON = `
+	{
+  	"selector": {
+    	"$and": [
+        {
+	    		"writer": {
+						"$size": 2
+	    		}
+				},
+				{
+	    		"year": {
+					"$mod": [2, 0]
+	    		}
+				}
+    	]
+		}
+	}`
+	docsRaw, err := movieDB.QueryJSON(rawJSON)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsQuery, docsRaw) {
+		t.Error("db query size and mod not equal")
+	}
+}
+
+func TestRatingOrYear(t *testing.T) {
+	docsQuery, err := movieDB.Query(nil, "rating != nil || year < 2000", nil, nil, nil, nil)
+	if err != nil {
+		t.Error("db query error", err)
+	}
+
+	var rawJSON = `
+	{
+  	"selector":{
+    	"$or": [
+        {
+	    		"rating": {
+						"$ne": null
+	    		}
+				},
+				{
+	    		"year": {
+  					"$lt": 2000
+	    		}
+				}
+    	]
+		}
+	}`
+	docsRaw, err := movieDB.QueryJSON(rawJSON)
+	if err != nil {
+		t.Error("db query json error", err)
+	}
+
+	if !reflect.DeepEqual(docsRaw, docsQuery) {
+		t.Error("db query rating or year not equal")
+	}
+}
 
 // {
 //     "selector": {
