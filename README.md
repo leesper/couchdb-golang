@@ -9,7 +9,7 @@ A Golang library for working with CouchDB 2.x
 * Server : CouchDB server instance
 * Database : CouchDB database instance
 
-
+Inspired by [CouchDB-Python](https://github.com/djc/couchdb-python)
 
 # Documentation
 ```go
