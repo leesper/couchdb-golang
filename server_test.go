@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -355,12 +356,19 @@ func TestServerExists(t *testing.T) {
 }
 
 func TestServerConfig(t *testing.T) {
-	config, err := server.Config("couchdb@localhost")
+	version, err := server.Version()
 	if err != nil {
-		t.Error(`server config error`, err)
+		t.Error("server version error", err)
 	}
-	if reflect.ValueOf(config).Kind() != reflect.Map {
-		t.Error(`config not of type map`)
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		config, err := server.Config("couchdb@localhost")
+		if err != nil {
+			t.Error(`server config error`, err)
+		}
+		if reflect.ValueOf(config).Kind() != reflect.Map {
+			t.Error(`config not of type map`)
+		}
 	}
 }
 
@@ -390,19 +398,26 @@ func TestServerVars(t *testing.T) {
 }
 
 func TestServerStats(t *testing.T) {
-	stats, err := server.Stats("couchdb@localhost", "")
+	version, err := server.Version()
 	if err != nil {
-		t.Error(`server stats error`, err)
+		t.Error("server version error", err)
 	}
-	if reflect.ValueOf(stats).Kind() != reflect.Map {
-		t.Error(`stats not of map type`)
-	}
-	stats, err = server.Stats("couchdb@localhost", "couchdb")
-	if err != nil {
-		t.Error(`server stats httpd/requests error`, err)
-	}
-	if reflect.ValueOf(stats).Kind() != reflect.Map {
-		t.Error(`httpd/requests stats not of map type`)
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		stats, err := server.Stats("couchdb@localhost", "")
+		if err != nil {
+			t.Error(`server stats error`, err)
+		}
+		if reflect.ValueOf(stats).Kind() != reflect.Map {
+			t.Error(`stats not of map type`)
+		}
+		stats, err = server.Stats("couchdb@localhost", "couchdb")
+		if err != nil {
+			t.Error(`server stats httpd/requests error`, err)
+		}
+		if reflect.ValueOf(stats).Kind() != reflect.Map {
+			t.Error(`httpd/requests stats not of map type`)
+		}
 	}
 }
 
@@ -597,23 +612,30 @@ func TestReplicateContinuous(t *testing.T) {
 }
 
 func TestMembership(t *testing.T) {
-	allNodes, clusterNodes, err := server.Membership()
+	version, err := server.Version()
 	if err != nil {
-		t.Error(`server membership error`, err)
+		t.Error("server version error", err)
 	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		allNodes, clusterNodes, err := server.Membership()
+		if err != nil {
+			t.Error(`server membership error`, err)
+		}
 
-	kind := reflect.ValueOf(allNodes).Kind()
-	elemKind := reflect.TypeOf(allNodes).Elem().Kind()
+		kind := reflect.ValueOf(allNodes).Kind()
+		elemKind := reflect.TypeOf(allNodes).Elem().Kind()
 
-	if kind != reflect.Slice || elemKind != reflect.String {
-		t.Error(`clusterNodes should be slice of string`)
-	}
+		if kind != reflect.Slice || elemKind != reflect.String {
+			t.Error(`clusterNodes should be slice of string`)
+		}
 
-	kind = reflect.ValueOf(clusterNodes).Kind()
-	elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
+		kind = reflect.ValueOf(clusterNodes).Kind()
+		elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
 
-	if kind != reflect.Slice || elemKind != reflect.String {
-		t.Error(`allNodes should be slice of string`)
+		if kind != reflect.Slice || elemKind != reflect.String {
+			t.Error(`allNodes should be slice of string`)
+		}
 	}
 }
 

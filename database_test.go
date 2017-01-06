@@ -673,8 +673,8 @@ func TestPurge(t *testing.T) {
 			t.Error(`db set error`, err)
 		}
 		result, err := testsDB.Purge([]map[string]interface{}{doc})
-		if err == nil {
-			t.Error(`db purge ok`, err)
+		if err != nil {
+			t.Error(`db purge error`, err)
 		}
 
 		purgeSeq := int(result["purge_seq"].(float64))
