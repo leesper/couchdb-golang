@@ -1,7 +1,7 @@
 language: go
 
-services:
-  - couchdb
+# services:
+  # - couchdb
 
 go:
   - 1.6
@@ -9,6 +9,9 @@ go:
   - master
 
 before_script:
+  - wget http://apache.fayea.com/couchdb/source/2.0.0/apache-couchdb-2.0.0.tar.gz
+  - tar -xzvf apache-couchdb-2.0.0.tar.gz
+  - cd apache-couchdb-2.0.0 && ./configure && make release
   - go vet
 
 gobuild_args: -v -race
