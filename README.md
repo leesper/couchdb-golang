@@ -87,9 +87,9 @@ NewDatabaseWithResource returns a CouchDB database instance with resource obj.
 
 ### func (d *Database) Available
 ```go
-func (d *Database) Available() bool
+func (d *Database) Available() error
 ```
-Available returns true if the database is good to go.
+Available returns error if the database is not good to go.
 
 ### func (d *Database) Changes
 ```go

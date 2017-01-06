@@ -79,10 +79,10 @@ func newDatabase(res *Resource) (*Database, error) {
 	}, nil
 }
 
-// Available returns true if the database is good to go.
-func (d *Database) Available() bool {
+// Available returns error if the database is not good to go.
+func (d *Database) Available() error {
 	_, _, err := d.resource.Head("", nil, nil)
-	return err == nil
+	return err
 }
 
 // Save creates a new document or update an existing document.

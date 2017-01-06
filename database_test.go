@@ -20,7 +20,7 @@ func TestNewDefaultDB(t *testing.T) {
 	if err != nil {
 		t.Errorf("new default database error %v", err)
 	}
-	if dbDefault.Available() {
+	if err = dbDefault.Available(); err == nil {
 		t.Error(`db available`)
 	}
 }
@@ -29,12 +29,12 @@ func TestNewDB(t *testing.T) {
 	newDB := "golang-newdb"
 	server.Create(newDB)
 	defer server.Delete(newDB)
-	dbNew, err := NewDatabase(DefaultBaseURL + newDB)
+	dbNew, err := NewDatabase(fmt.Sprintf("%s/%s", DefaultBaseURL, newDB))
 	if err != nil {
 		t.Error(`new database error`, err)
 	}
-	if !dbNew.Available() {
-		t.Error(`db not available`)
+	if err = dbNew.Available(); err != nil {
+		t.Error(`db not available, error`, err)
 	}
 }
 
@@ -131,11 +131,11 @@ func TestSaveExistingBatch(t *testing.T) {
 }
 
 func TestDatabaseExists(t *testing.T) {
-	if !testsDB.Available() {
-		t.Error(`golang-tests not available`)
+	if err := testsDB.Available(); err != nil {
+		t.Error(`golang-tests not available, error`, err)
 	}
 	dbMissing, _ := NewDatabase("golang-missing")
-	if dbMissing.Available() {
+	if err := dbMissing.Available(); err == nil {
 		t.Error(`golang-missing available`)
 	}
 }
