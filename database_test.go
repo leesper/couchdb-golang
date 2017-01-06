@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -659,23 +660,28 @@ func TestChanges(t *testing.T) {
 	}
 }
 
-// FIXME: Purge not implemented in CouchDB 2.0.0 yet.
 func TestPurge(t *testing.T) {
-	doc := map[string]interface{}{"a": "b"}
-	err := testsDB.Set("purge", doc)
+	version, err := server.Version()
 	if err != nil {
-		t.Error(`db set error`, err)
+		t.Error("server version error", err)
 	}
-	_, err = testsDB.Purge([]map[string]interface{}{doc})
-	if err == nil {
-		t.Error(`db purge ok`, err)
-	}
-	/*
+	// TODO: purge not implemented in CouchDB 2.0.0
+	if !strings.HasPrefix(version, "2") {
+		doc := map[string]interface{}{"a": "b"}
+		err := testsDB.Set("purge", doc)
+		if err != nil {
+			t.Error(`db set error`, err)
+		}
+		result, err := testsDB.Purge([]map[string]interface{}{doc})
+		if err == nil {
+			t.Error(`db purge ok`, err)
+		}
+
 		purgeSeq := int(result["purge_seq"].(float64))
 		if purgeSeq != 1 {
 			t.Errorf("db purge seq=%d want 1", purgeSeq)
 		}
-	*/
+	}
 }
 
 func TestSecurity(t *testing.T) {
@@ -858,512 +864,617 @@ func TestParseSortSyntax(t *testing.T) {
 }
 
 func TestQueryYearAndID(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `_id > nil && in(year, []int{2007, 2004})`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `_id > nil && in(year, []int{2007, 2004})`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
+		}
 
-	var rawJSON = `
-	{
-	    "selector": {
-				"$and": [
-	        	{
-	            "_id": { "$gt": null }
-	        	},
-	        	{
-	            "year": {
-	              "$in": [2007, 2004]
-	          	}
-	        	}
-	    	]
-			}
-	}`
+		var rawJSON = `
+		{
+		    "selector": {
+					"$and": [
+		        	{
+		            "_id": { "$gt": null }
+		        	},
+		        	{
+		            "year": {
+		              "$in": [2007, 2004]
+		          	}
+		        	}
+		    	]
+				}
+		}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query year and id not equal")
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query year and id not equal")
+		}
 	}
 }
 
 func TestQueryYearOrDirector(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `year == 1989 && (director == "Ademir Kenovic" || director == "Dezs Garas")`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-		"selector": {
-			"year": 1989,
-			"$or": [
-				{ "director": "Ademir Kenovic" },
-				{ "director": "Dezs Garas" }
-			]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `year == 1989 && (director == "Ademir Kenovic" || director == "Dezs Garas")`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		var rawJSON = `
+		{
+			"selector": {
+				"year": 1989,
+				"$or": [
+					{ "director": "Ademir Kenovic" },
+					{ "director": "Dezs Garas" }
+				]
+			}
+		}`
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query year or director not equal")
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query year or director not equal")
+		}
 	}
 }
 
 func TestQueryYearGteLteNot(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `year >= 1989 && year <= 2006 && year != 2004`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-		"selector": {
-			"year": {
-	      "$gte": 1989
-	    },
-	    "year": {
-	      "$lte": 2006
-	    },
-	    "$not": {
-	      "year": 2004
-	    }
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `year >= 1989 && year <= 2006 && year != 2004`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		var rawJSON = `
+		{
+			"selector": {
+				"year": {
+		      "$gte": 1989
+		    },
+		    "year": {
+		      "$lte": 2006
+		    },
+		    "$not": {
+		      "year": 2004
+		    }
+			}
+		}`
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query year gte lte not not equal")
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query year gte lte not not equal")
+		}
 	}
 }
 
 func TestQueryIMDBRatingNor(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `imdb.rating >= 6 && imdb.rating <= 9 && nor(imdb.rating == 8.1, imdb.rating == 8.2)`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"imdb.rating": {
-        "$gte": 6
-    	},
-    	"imdb.rating": {
-        "$lte": 9
-    	},
-    	"$nor": [
-        { "imdb.rating": 8.1 },
-        { "imdb.rating": 8.2 }
-    	]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `imdb.rating >= 6 && imdb.rating <= 9 && nor(imdb.rating == 8.1, imdb.rating == 8.2)`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"imdb.rating": {
+	        "$gte": 6
+	    	},
+	    	"imdb.rating": {
+	        "$lte": 9
+	    	},
+	    	"$nor": [
+	        { "imdb.rating": 8.1 },
+	        { "imdb.rating": 8.2 }
+	    	]
+			}
+		}`
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query imdb rating nor not equal")
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query imdb rating nor not equal")
+		}
 	}
 }
 
 func TestQueryGenreAll(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `_id > nil && all(genre, []string{"Comedy", "Short"})`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"_id": {
-        "$gt": null
-    	},
-    	"genre": {
-        "$all": ["Comedy","Short"]
-    	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `_id > nil && all(genre, []string{"Comedy", "Short"})`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"_id": {
+	        "$gt": null
+	    	},
+	    	"genre": {
+	        "$all": ["Comedy","Short"]
+	    	}
+			}
+		}`
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query genre all not equal")
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query genre all not equal")
+		}
 	}
 }
 
 func TestQueryGenreElemMatch(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `_id > nil && any(genre, genre == "Horror" || genre == "Comedy")`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `_id > nil && any(genre, genre == "Horror" || genre == "Comedy")`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
+		}
 
-	var rawJSON = `
-	{
-  	"selector": {
-			"$and": [
-				{
-					"_id": {
-					"$gt": null
-					}
-				},
-				{
-					"genre": {
-						"$elemMatch": {
-							"$or": [
-								{
-									"$eq": "Horror"
-								},
-								{
-									"$eq": "Comedy"
-								}
-							]
+		var rawJSON = `
+		{
+	  	"selector": {
+				"$and": [
+					{
+						"_id": {
+						"$gt": null
+						}
+					},
+					{
+						"genre": {
+							"$elemMatch": {
+								"$or": [
+									{
+										"$eq": "Horror"
+									},
+									{
+										"$eq": "Comedy"
+									}
+								]
+							}
 						}
 					}
-				}
-			]
+				]
+			}
+		}`
+
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
 		}
-	}`
 
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
-
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query genre elem match not equal")
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query genre elem match not equal")
+		}
 	}
 }
 
 func TestQueryRegex(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `regex(director, "^D")`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"director": {"$regex": "^D"}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `regex(director, "^D")`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query regex not equal")
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"director": {"$regex": "^D"}
+			}
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query regex not equal")
+		}
 	}
 }
 
 func TestQueryYearIDNin(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `_id > nil && nin(year, []int{1989, 1990})`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"$and": [
-        {
-          "_id": { "$gt": null }
-        },
-        {
-          "year": {
-          	"$nin": [1989, 1990]
-          }
-        }
-    	]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `_id > nil && nin(year, []int{1989, 1990})`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query year id nin not equal")
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"$and": [
+	        {
+	          "_id": { "$gt": null }
+	        },
+	        {
+	          "year": {
+	          	"$nin": [1989, 1990]
+	          }
+	        }
+	    	]
+			}
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query year id nin not equal")
+		}
 	}
 }
 
 func TestQueryTypeAndExists(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `typeof(poster, "string") && exists(runtime, true)`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"$and": [
-        {
-	    		"poster": {
-						"$type": "string"
-	    		}
-				},
-				{
-	    		"runtime": {
-						"$exists": true
-	    		}
-				}
-    	]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `typeof(poster, "string") && exists(runtime, true)`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query type and exists not equal")
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"$and": [
+	        {
+		    		"poster": {
+							"$type": "string"
+		    		}
+					},
+					{
+		    		"runtime": {
+							"$exists": true
+		    		}
+					}
+	    	]
+			}
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query type and exists not equal")
+		}
 	}
 }
 
 func TestQuerySizeAndMod(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, `size(writer, 2) && mod(year, 2, 0)`, nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector": {
-    	"$and": [
-        {
-	    		"writer": {
-						"$size": 2
-	    		}
-				},
-				{
-	    		"year": {
-					"$mod": [2, 0]
-	    		}
-				}
-    	]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, `size(writer, 2) && mod(year, 2, 0)`, nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query size and mod not equal")
+		var rawJSON = `
+		{
+	  	"selector": {
+	    	"$and": [
+	        {
+		    		"writer": {
+							"$size": 2
+		    		}
+					},
+					{
+		    		"year": {
+						"$mod": [2, 0]
+		    		}
+					}
+	    	]
+			}
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query size and mod not equal")
+		}
 	}
 }
 
 func TestRatingOrYear(t *testing.T) {
-	docsQuery, err := movieDB.Query(nil, "rating != nil || year < 2000", nil, nil, nil, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
-
-	var rawJSON = `
-	{
-  	"selector":{
-    	"$or": [
-        {
-	    		"rating": {
-						"$ne": null
-	    		}
-				},
-				{
-	    		"year": {
-  					"$lt": 2000
-	    		}
-				}
-    	]
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		docsQuery, err := movieDB.Query(nil, "rating != nil || year < 2000", nil, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
 		}
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
 
-	if !reflect.DeepEqual(docsRaw, docsQuery) {
-		t.Error("db query rating or year not equal")
+		var rawJSON = `
+		{
+	  	"selector":{
+	    	"$or": [
+	        {
+		    		"rating": {
+							"$ne": null
+		    		}
+					},
+					{
+		    		"year": {
+	  					"$lt": 2000
+		    		}
+					}
+	    	]
+			}
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsRaw, docsQuery) {
+			t.Error("db query rating or year not equal")
+		}
 	}
 }
 
 func TestQuerySortLimitSkip(t *testing.T) {
-	fields := []string{"_id", "_rev", "year", "director"}
-	selector := `year > 1989`
-	sorts := []string{"desc(_id)"}
-	docsQuery, err := movieDB.Query(fields, selector, sorts, 5, 2, nil)
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db query error", err)
+		t.Error("server version error", err)
 	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		fields := []string{"_id", "_rev", "year", "director"}
+		selector := `year > 1989`
+		sorts := []string{"desc(_id)"}
+		docsQuery, err := movieDB.Query(fields, selector, sorts, 5, 2, nil)
+		if err != nil {
+			t.Error("db query error", err)
+		}
 
-	var rawJSON = `
-	{
-    "selector": {
-      "year": {"$gt": 1989}
-    },
-    "fields": ["_id", "_rev", "year", "director"],
-    "limit": 5,
-    "skip": 2,
-    "sort": [{"_id": "desc"}]
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
+		var rawJSON = `
+		{
+	    "selector": {
+	      "year": {"$gt": 1989}
+	    },
+	    "fields": ["_id", "_rev", "year", "director"],
+	    "limit": 5,
+	    "skip": 2,
+	    "sort": [{"_id": "desc"}]
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
 
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query sort limit skip not equal")
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query sort limit skip not equal")
+		}
 	}
 }
 
 func TestIndexCRUD(t *testing.T) {
-	designName, indexName, err := movieDB.PutIndex([]string{"asc(year)"}, "", "year-index")
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db put index error", err)
+		t.Error("server version error", err)
 	}
-
-	indexResult, err := movieDB.GetIndex()
-	if err != nil {
-		t.Error("db get index error", err)
-	}
-
-	var totalRows float64
-	err = json.Unmarshal(*indexResult["total_rows"], &totalRows)
-	if err != nil {
-		t.Error("json unmarshal total rows error", err)
-	}
-	if int(totalRows) < 2 {
-		t.Error("index total rows should be >= 2")
-	}
-
-	var idxes = []*json.RawMessage{}
-	err = json.Unmarshal(*indexResult["indexes"], &idxes)
-	if err != nil {
-		t.Error("json unmarshal indexes error", err)
-	}
-	idxMap := map[string]*json.RawMessage{}
-	found := false
-	idxName := ""
-	idxType := ""
-	idxDef := map[string]*json.RawMessage{}
-	defFields := []*json.RawMessage{}
-	fieldMap := map[string]string{}
-	for _, idx := range idxes {
-		json.Unmarshal(*idx, &idxMap)
-		json.Unmarshal(*idxMap["name"], &idxName)
-		if idxName != "year-index" {
-			continue
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		designName, indexName, err := movieDB.PutIndex([]string{"asc(year)"}, "", "year-index")
+		if err != nil {
+			t.Error("db put index error", err)
 		}
-		found = true
-		json.Unmarshal(*idxMap["type"], &idxType)
-		if idxType != "json" {
-			t.Error("index type not json")
-		}
-		json.Unmarshal(*idxMap["def"], &idxDef)
-		json.Unmarshal(*idxDef["fields"], &defFields)
-		if len(defFields) != 1 {
-			t.Error("index def fields != 1")
-		}
-		json.Unmarshal(*defFields[0], &fieldMap)
-		if fieldMap["year"] != "asc" {
-			t.Errorf("index year order %s want asc", fieldMap["year"])
-		}
-	}
-	if !found {
-		t.Error("index year not found")
-	}
 
-	err = movieDB.DeleteIndex(designName, indexName)
-	if err != nil {
-		t.Error("db delete index error", err)
+		indexResult, err := movieDB.GetIndex()
+		if err != nil {
+			t.Error("db get index error", err)
+		}
+
+		var totalRows float64
+		err = json.Unmarshal(*indexResult["total_rows"], &totalRows)
+		if err != nil {
+			t.Error("json unmarshal total rows error", err)
+		}
+		if int(totalRows) < 2 {
+			t.Error("index total rows should be >= 2")
+		}
+
+		var idxes = []*json.RawMessage{}
+		err = json.Unmarshal(*indexResult["indexes"], &idxes)
+		if err != nil {
+			t.Error("json unmarshal indexes error", err)
+		}
+		idxMap := map[string]*json.RawMessage{}
+		found := false
+		idxName := ""
+		idxType := ""
+		idxDef := map[string]*json.RawMessage{}
+		defFields := []*json.RawMessage{}
+		fieldMap := map[string]string{}
+		for _, idx := range idxes {
+			json.Unmarshal(*idx, &idxMap)
+			json.Unmarshal(*idxMap["name"], &idxName)
+			if idxName != "year-index" {
+				continue
+			}
+			found = true
+			json.Unmarshal(*idxMap["type"], &idxType)
+			if idxType != "json" {
+				t.Error("index type not json")
+			}
+			json.Unmarshal(*idxMap["def"], &idxDef)
+			json.Unmarshal(*idxDef["fields"], &defFields)
+			if len(defFields) != 1 {
+				t.Error("index def fields != 1")
+			}
+			json.Unmarshal(*defFields[0], &fieldMap)
+			if fieldMap["year"] != "asc" {
+				t.Errorf("index year order %s want asc", fieldMap["year"])
+			}
+		}
+		if !found {
+			t.Error("index year not found")
+		}
+
+		err = movieDB.DeleteIndex(designName, indexName)
+		if err != nil {
+			t.Error("db delete index error", err)
+		}
 	}
 }
 
 func TestQueryDoubleSort(t *testing.T) {
-	designName, indexName, err := movieDB.PutIndex([]string{"imdb.rating", "imdb.votes"}, "", "imdb-index")
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db put index error", err)
+		t.Error("server version error", err)
 	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		designName, indexName, err := movieDB.PutIndex([]string{"imdb.rating", "imdb.votes"}, "", "imdb-index")
+		if err != nil {
+			t.Error("db put index error", err)
+		}
 
-	fields := []string{"_id", "_rev", "year", "title"}
-	selector := `year > 1989 && imdb.rating > 6 && imdb.votes > 100`
-	sorts := []string{"imdb.rating", "imdb.votes"}
-	docsQuery, err := movieDB.Query(fields, selector, sorts, nil, nil, nil)
-	if err != nil {
-		t.Error("db query error", err)
+		fields := []string{"_id", "_rev", "year", "title"}
+		selector := `year > 1989 && imdb.rating > 6 && imdb.votes > 100`
+		sorts := []string{"imdb.rating", "imdb.votes"}
+		docsQuery, err := movieDB.Query(fields, selector, sorts, nil, nil, nil)
+		if err != nil {
+			t.Error("db query error", err)
+		}
+
+		var rawJSON = `
+		{
+		  "selector": {
+		  	"year": {"$gt": 1989},
+				"imdb.rating": {"$gt": 6},
+				"imdb.votes": {"$gt": 100}
+		  },
+		  "fields": ["_id", "_rev", "year", "title"],
+		  "sort": [{"imdb.rating": "asc"}, {"imdb.votes": "asc"}]
+		}`
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+
+		if !reflect.DeepEqual(docsQuery, docsRaw) {
+			t.Error("db query double sort not equal")
+		}
+
+		movieDB.DeleteIndex(designName, indexName)
 	}
-
-	var rawJSON = `
-	{
-	  "selector": {
-	  	"year": {"$gt": 1989},
-			"imdb.rating": {"$gt": 6},
-			"imdb.votes": {"$gt": 100}
-	  },
-	  "fields": ["_id", "_rev", "year", "title"],
-	  "sort": [{"imdb.rating": "asc"}, {"imdb.votes": "asc"}]
-	}`
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
-
-	if !reflect.DeepEqual(docsQuery, docsRaw) {
-		t.Error("db query double sort not equal")
-	}
-
-	movieDB.DeleteIndex(designName, indexName)
 }
 
 func TestQueryUseIndex(t *testing.T) {
-	designName, indexName, err := movieDB.PutIndex([]string{"year"}, "", "year-index")
+	version, err := server.Version()
 	if err != nil {
-		t.Error("db put index error", err)
+		t.Error("server version error", err)
 	}
-	if indexName != "year-index" {
-		t.Errorf("db put index return %s want year-index", indexName)
-	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		designName, indexName, err := movieDB.PutIndex([]string{"year"}, "", "year-index")
+		if err != nil {
+			t.Error("db put index error", err)
+		}
+		if indexName != "year-index" {
+			t.Errorf("db put index return %s want year-index", indexName)
+		}
 
-	fields := []string{"_id", "_rev", "year", "title"}
-	selector := `year > 1989`
-	sorts := []string{"asc(year)"}
-	docsQuery, err := movieDB.Query(fields, selector, sorts, 5, 0, []string{designName, indexName})
-	if err != nil {
-		t.Error("db query error", err)
-	}
+		fields := []string{"_id", "_rev", "year", "title"}
+		selector := `year > 1989`
+		sorts := []string{"asc(year)"}
+		docsQuery, err := movieDB.Query(fields, selector, sorts, 5, 0, []string{designName, indexName})
+		if err != nil {
+			t.Error("db query error", err)
+		}
 
-	var rawJSON = `
-	{
-	  "selector": {
-	    "year": {"$gt": 1989}
-	  },
-	  "fields": ["_id", "_rev", "year", "title"],
-	  "sort": [{"year": "asc"}],
-	  "limit": 5,
-	  "skip": 0,
-		"use_index": [%q, %q]
-	}`
-	rawJSON = fmt.Sprintf(rawJSON, designName, indexName)
-	docsRaw, err := movieDB.QueryJSON(rawJSON)
-	if err != nil {
-		t.Error("db query json error", err)
-	}
-	if !reflect.DeepEqual(docsRaw, docsQuery) {
-		t.Error("db query usd index not equal")
+		var rawJSON = `
+		{
+		  "selector": {
+		    "year": {"$gt": 1989}
+		  },
+		  "fields": ["_id", "_rev", "year", "title"],
+		  "sort": [{"year": "asc"}],
+		  "limit": 5,
+		  "skip": 0,
+			"use_index": [%q, %q]
+		}`
+		rawJSON = fmt.Sprintf(rawJSON, designName, indexName)
+		docsRaw, err := movieDB.QueryJSON(rawJSON)
+		if err != nil {
+			t.Error("db query json error", err)
+		}
+		if !reflect.DeepEqual(docsRaw, docsQuery) {
+			t.Error("db query usd index not equal")
+		}
 	}
 }
