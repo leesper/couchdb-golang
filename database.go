@@ -1342,7 +1342,25 @@ func (d *Database) DeleteIndex(ddoc, name string) error {
 	return err
 }
 
+// designPath resturns a make-up design path based on designDoc and designType
+// for example designPath("design/foo", "_view") returns "_design/design/_view/foo"
+func designPath(designDoc, designType string) string {
+	if strings.HasPrefix(designDoc, "_") {
+		return designDoc
+	}
+	parts := strings.SplitN(designDoc, "/", 2)
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return strings.Join([]string{"_design", parts[0], designType, parts[1]}, "/")
+}
+
 // View executes a predefined design document view and returns the results.
-func (d *Database) View(name string, rowFunc func(Row) Row, options url.Values) (ViewResults, error) {
-	return ViewResults{}, nil
+func (d *Database) View(name string, wrapper func(Row) Row, options url.Values) (ViewResults, error) {
+	designDocPath := designPath(name, "_view")
+	return ViewResults{
+		resource:  d.resource,
+		designDoc: designDocPath,
+		options:   options,
+	}, nil
 }
