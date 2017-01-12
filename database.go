@@ -1341,3 +1341,8 @@ func (d *Database) DeleteIndex(ddoc, name string) error {
 	_, _, err := indexRes.DeleteJSON("", nil, nil)
 	return err
 }
+
+// View executes a predefined design document view and returns the results.
+func (d *Database) View(name string, rowFunc func(Row) Row, options url.Values) (ViewResults, error) {
+	return ViewResults{}, nil
+}
