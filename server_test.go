@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	server  *Server
-	testsDB *Database
-	movieDB *Database
-	movies  = []map[string]interface{}{
+	server   *Server
+	testsDB  *Database
+	movieDB  *Database
+	designDB *Database
+	movies   = []map[string]interface{}{
 		{
 			"_id":     "976059",
 			"title":   "Spacecataz",
@@ -295,6 +296,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		os.Exit(1)
 	}
+
 	server.Delete("golang-tests")
 	testsDB, err = server.Create("golang-tests")
 	if err != nil {
@@ -305,11 +307,18 @@ func TestMain(m *testing.M) {
 	movieDB, err = server.Create("golang-movies")
 	if err != nil {
 		log.Println("create error", err)
-		os.Exit(2)
+		os.Exit(3)
 	}
 	_, err = movieDB.Update(movies, nil)
 	if err != nil {
-		os.Exit(2)
+		os.Exit(4)
+	}
+
+	server.Delete("golang-design")
+	designDB, err = server.Create("golang-design")
+	if err != nil {
+		log.Println("create error", err)
+		os.Exit(5)
 	}
 
 	// run all the tests
@@ -318,6 +327,7 @@ func TestMain(m *testing.M) {
 	// tear down
 	server.Delete("golang-tests")
 	server.Delete("golang-movies")
+	server.Delete("golang-design")
 	os.Exit(code)
 }
 
