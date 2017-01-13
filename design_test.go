@@ -18,19 +18,19 @@ func TestRowObject(t *testing.T) {
 
 	row := rows[0]
 	if row.ID != "" {
-		t.Error("row ID not empty ", row.ID)
+		t.Error("row ID not empty", row.ID)
 	}
 
 	if row.Key.(string) != "blah" {
-		t.Errorf("row key %s want blah", row.Key)
+		t.Errorf("row key %s want blah", row.Key.(string))
 	}
 
 	if row.Val != nil {
-		t.Error("row value not nil ", row.Val)
+		t.Error("row value not nil", row.Val)
 	}
 
-	if row.Err.String() != "not_found" {
-		t.Errorf("row error %v want not_found", row.Err)
+	if row.Err.Error() != "not_found" {
+		t.Errorf("row error %s want not_found", row.Err)
 	}
 
 	_, _, err = designDB.Save(map[string]interface{}{"_id": "xyz", "foo": "bar"}, nil)
@@ -57,7 +57,7 @@ func TestRowObject(t *testing.T) {
 		t.Errorf("row key %s want xyz", row.Key)
 	}
 
-	value := row.Value.(map[string]interface{})
+	value := row.Val.(map[string]interface{})
 	_, ok := value["rev"]
 	if !(ok && len(value) == 1) {
 		t.Error("row value not contains rev only")

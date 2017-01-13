@@ -20,15 +20,25 @@ type ViewResults struct {
 	resource  *Resource
 	designDoc string
 	options   url.Values
+	wrapper   func(Row) Row
+	Offset    int
+	TotalRows int
 }
 
-func (vr ViewResults) Rows() ([]Row, error) {
+// Rows returns a slice of rows mapped (and reduced) by the view.
+func (vr *ViewResults) Rows() ([]Row, error) {
 	keys, ok := vr.options["keys"]
 	var data []byte
 	var err error
 	if ok {
 		body := map[string]interface{}{"keys": keys}
-		_, data, err = vr.resource.PostJSON(vr.designDoc, nil, body, vr.options)
+		options := url.Values{}
+		for k, v := range vr.options {
+			if k != "keys" {
+				options[k] = v
+			}
+		}
+		_, data, err = vr.resource.PostJSON(vr.designDoc, nil, body, options)
 		if err != nil {
 			return nil, err
 		}
@@ -47,11 +57,16 @@ func (vr ViewResults) Rows() ([]Row, error) {
 
 	var totalRows float64
 	json.Unmarshal(jsonMap["total_rows"], &totalRows)
+	vr.TotalRows = int(totalRows)
+
+	var offset float64
+	json.Unmarshal(jsonMap["offset"], &offset)
+	vr.Offset = int(offset)
 
 	rowsRaw := []json.RawMessage{}
 	json.Unmarshal(jsonMap["rows"], &rowsRaw)
 
-	rows := make([]Row, int(totalRows))
+	rows := make([]Row, len(rowsRaw))
 	var rowMap map[string]interface{}
 	for idx, raw := range rowsRaw {
 		json.Unmarshal(raw, &rowMap)
@@ -75,6 +90,11 @@ func (vr ViewResults) Rows() ([]Row, error) {
 		if doc, ok := rowMap["doc"]; ok {
 			row.Doc = doc
 		}
+
+		if vr.wrapper != nil {
+			row = vr.wrapper(row)
+		}
 		rows[idx] = row
 	}
+	return rows, nil
 }

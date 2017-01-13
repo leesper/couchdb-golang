@@ -1356,11 +1356,12 @@ func designPath(designDoc, designType string) string {
 }
 
 // View executes a predefined design document view and returns the results.
-func (d *Database) View(name string, wrapper func(Row) Row, options url.Values) (ViewResults, error) {
+func (d *Database) View(name string, wrapper func(Row) Row, options url.Values) (*ViewResults, error) {
 	designDocPath := designPath(name, "_view")
-	return ViewResults{
+	return &ViewResults{
 		resource:  d.resource,
 		designDoc: designDocPath,
 		options:   options,
+		wrapper:   wrapper,
 	}, nil
 }
