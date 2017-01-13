@@ -3,7 +3,9 @@ package couchdb
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
+	"strings"
 )
 
 // Row represents a row returned by database views.
@@ -13,6 +15,16 @@ type Row struct {
 	Val interface{}
 	Doc interface{}
 	Err error
+}
+
+// String returns a string representation for Row
+func (r Row) String() string {
+	id := fmt.Sprintf("%s=%s", "id", r.ID)
+	key := fmt.Sprintf("%s=%v", "key", r.Key)
+	doc := fmt.Sprintf("%s=%v", "doc", r.Doc)
+	estr := fmt.Sprintf("%s=%v", "err", r.Err)
+	val := fmt.Sprintf("%s=%v", "val", r.Val)
+	return fmt.Sprintf("<%s %s>", "Row", strings.Join([]string{id, key, doc, estr, val}, ", "))
 }
 
 // ViewResults represents the results produced by design document views.
@@ -36,6 +48,9 @@ func NewViewResults(r *Resource, ddoc string, opt map[string]interface{}, wr fun
 		designDoc: ddoc,
 		options:   opt,
 		wrapper:   wr,
+		offset:    -1,
+		totalRows: -1,
+		updateSeq: -1,
 	}
 }
 

@@ -1,6 +1,9 @@
 package couchdb
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestRowObject(t *testing.T) {
 	results, err := designDB.View("_all_docs", nil, map[string]interface{}{"keys": []string{"blah"}})
@@ -229,8 +232,69 @@ func TestUpdateSeq(t *testing.T) {
 	}
 }
 
-func TestProperties(t *testing.T) {}
-func TestRowRepr(t *testing.T)    {}
+func TestProperties(t *testing.T) {
+	results, err := designDB.View("_all_docs", nil, nil)
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	rows, err := results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	if rows == nil {
+		t.Error("rows nil")
+	}
+
+	totalRows, _ := results.TotalRows()
+	if totalRows == -1 {
+		t.Error("total rows invalid")
+	}
+
+	offset, _ := results.Offset()
+	if offset == -1 {
+		t.Error("offset invalid")
+	}
+}
+
+func TestRowRepr(t *testing.T) {
+	results, err := designDB.View("_all_docs", nil, nil)
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	rows, err := results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	if !strings.Contains(rows[0].String(), "id") {
+		t.Errorf("row %s not contains id", rows[0])
+	}
+
+	if !strings.Contains(rows[0].String(), "Row") {
+		t.Errorf("row %s not contains Row", rows[0])
+	}
+
+	results, err = designDB.View("test/multi_key", nil, nil)
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	rows, err = results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	if !strings.Contains(rows[0].String(), "id") {
+		t.Errorf("row %s not contains id", rows[0])
+	}
+
+	if !strings.Contains(rows[0].String(), "Row") {
+		t.Errorf("row %s not contains Row", rows[0])
+	}
+}
 
 //
 func TestAllRows(t *testing.T)            {}
