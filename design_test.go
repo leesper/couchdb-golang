@@ -204,13 +204,33 @@ func TestViewWrapperFunction(t *testing.T) {
 	}
 }
 
-func TestIterView(t *testing.T)    {}
-func TestUpdateSeq(t *testing.T)   {}
-func TestTmpviewRepr(t *testing.T) {}
-func TestWrapperIter(t *testing.T) {}
-func TestWrapperRows(t *testing.T) {}
-func TestProperties(t *testing.T)  {}
-func TestRowRepr(t *testing.T)     {}
+func TestUpdateSeq(t *testing.T) {
+	err := designDB.Set("foo", map[string]interface{}{})
+	if err != nil {
+		t.Error("db set error", err)
+	}
+
+	results, err := designDB.View("_all_docs", nil, map[string]interface{}{"update_seq": true})
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	_, err = results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	updateSeq, err := results.UpdateSeq()
+	if err != nil {
+		t.Error("update seq error", err)
+	}
+	if updateSeq != 0 {
+		t.Errorf("update seq = %d want 0", updateSeq)
+	}
+}
+
+func TestProperties(t *testing.T) {}
+func TestRowRepr(t *testing.T)    {}
 
 //
 func TestAllRows(t *testing.T)            {}

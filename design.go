@@ -21,12 +21,57 @@ type ViewResults struct {
 	designDoc string
 	options   map[string]interface{}
 	wrapper   func(Row) Row
-	Offset    int
-	TotalRows int
+
+	offset    int
+	totalRows int
+	updateSeq int
+	rows      []Row
+	err       error
+}
+
+// NewViewResults returns a newly-allocated *ViewResults
+func NewViewResults(r *Resource, ddoc string, opt map[string]interface{}, wr func(Row) Row) *ViewResults {
+	return &ViewResults{
+		resource:  r,
+		designDoc: ddoc,
+		options:   opt,
+		wrapper:   wr,
+	}
+}
+
+// Offset returns offset of ViewResults
+func (vr *ViewResults) Offset() (int, error) {
+	if vr.rows == nil {
+		vr.rows, vr.err = vr.fetch()
+	}
+	return vr.offset, vr.err
+}
+
+// TotalRows returns total rows of ViewResults
+func (vr *ViewResults) TotalRows() (int, error) {
+	if vr.rows == nil {
+		vr.rows, vr.err = vr.fetch()
+	}
+	return vr.totalRows, vr.err
+}
+
+// UpdateSeq returns update sequence of ViewResults
+func (vr *ViewResults) UpdateSeq() (int, error) {
+	if vr.rows == nil {
+		vr.rows, vr.err = vr.fetch()
+	}
+	return vr.updateSeq, vr.err
 }
 
 // Rows returns a slice of rows mapped (and reduced) by the view.
 func (vr *ViewResults) Rows() ([]Row, error) {
+	if vr.rows == nil {
+		vr.rows, vr.err = vr.fetch()
+	}
+	return vr.rows, vr.err
+}
+
+func (vr *ViewResults) fetch() ([]Row, error) {
 	var data []byte
 	var err error
 	body := map[string]interface{}{}
@@ -61,12 +106,18 @@ func (vr *ViewResults) Rows() ([]Row, error) {
 
 	var totalRows float64
 	json.Unmarshal(*jsonMap["total_rows"], &totalRows)
-	vr.TotalRows = int(totalRows)
+	vr.totalRows = int(totalRows)
 
 	if offsetRaw, ok := jsonMap["offset"]; ok {
 		var offset float64
 		json.Unmarshal(*offsetRaw, &offset)
-		vr.Offset = int(offset)
+		vr.offset = int(offset)
+	}
+
+	if updateSeqRaw, ok := jsonMap["update_seq"]; ok {
+		var updateSeq float64
+		json.Unmarshal(*updateSeqRaw, &updateSeq)
+		vr.updateSeq = int(updateSeq)
 	}
 
 	var rowsRaw []*json.RawMessage
