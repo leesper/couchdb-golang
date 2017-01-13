@@ -19,7 +19,7 @@ type Row struct {
 type ViewResults struct {
 	resource  *Resource
 	designDoc string
-	options   url.Values
+	options   map[string]interface{}
 	wrapper   func(Row) Row
 	Offset    int
 	TotalRows int
@@ -27,49 +27,55 @@ type ViewResults struct {
 
 // Rows returns a slice of rows mapped (and reduced) by the view.
 func (vr *ViewResults) Rows() ([]Row, error) {
-	keys, ok := vr.options["keys"]
 	var data []byte
 	var err error
-	if ok {
-		body := map[string]interface{}{"keys": keys}
-		options := url.Values{}
-		for k, v := range vr.options {
-			if k != "keys" {
-				options[k] = v
+	body := map[string]interface{}{}
+	params := url.Values{}
+	for key, val := range vr.options {
+		switch key {
+		case "keys":
+			body[key] = val
+		default:
+			data, err = json.Marshal(val)
+			if err != nil {
+				return nil, err
 			}
-		}
-		_, data, err = vr.resource.PostJSON(vr.designDoc, nil, body, options)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		_, data, err = vr.resource.GetJSON(vr.designDoc, nil, vr.options)
-		if err != nil {
-			return nil, err
+			params.Add(key, string(data))
 		}
 	}
 
-	var jsonMap map[string]json.RawMessage
+	if len(body) > 0 {
+		_, data, err = vr.resource.PostJSON(vr.designDoc, nil, body, params)
+	} else {
+		_, data, err = vr.resource.GetJSON(vr.designDoc, nil, params)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonMap map[string]*json.RawMessage
 	err = json.Unmarshal(data, &jsonMap)
 	if err != nil {
 		return nil, err
 	}
 
 	var totalRows float64
-	json.Unmarshal(jsonMap["total_rows"], &totalRows)
+	json.Unmarshal(*jsonMap["total_rows"], &totalRows)
 	vr.TotalRows = int(totalRows)
 
-	var offset float64
-	json.Unmarshal(jsonMap["offset"], &offset)
-	vr.Offset = int(offset)
+	if offsetRaw, ok := jsonMap["offset"]; ok {
+		var offset float64
+		json.Unmarshal(*offsetRaw, &offset)
+		vr.Offset = int(offset)
+	}
 
-	rowsRaw := []json.RawMessage{}
-	json.Unmarshal(jsonMap["rows"], &rowsRaw)
+	var rowsRaw []*json.RawMessage
+	json.Unmarshal(*jsonMap["rows"], &rowsRaw)
 
 	rows := make([]Row, len(rowsRaw))
 	var rowMap map[string]interface{}
 	for idx, raw := range rowsRaw {
-		json.Unmarshal(raw, &rowMap)
+		json.Unmarshal(*raw, &rowMap)
 		row := Row{}
 		if id, ok := rowMap["id"]; ok {
 			row.ID = id.(string)

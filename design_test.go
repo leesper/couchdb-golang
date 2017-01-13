@@ -1,12 +1,9 @@
 package couchdb
 
-import (
-	"net/url"
-	"testing"
-)
+import "testing"
 
 func TestRowObject(t *testing.T) {
-	results, err := designDB.View("_all_docs", nil, url.Values{"keys": []string{"blah"}})
+	results, err := designDB.View("_all_docs", nil, map[string]interface{}{"keys": []string{"blah"}})
 	if err != nil {
 		t.Error("db view error", err)
 	}
@@ -38,7 +35,7 @@ func TestRowObject(t *testing.T) {
 		t.Error("db save error", err)
 	}
 
-	results, err = designDB.View("_all_docs", nil, url.Values{"keys": []string{"xyz"}})
+	results, err = designDB.View("_all_docs", nil, map[string]interface{}{"keys": []string{"xyz"}})
 	if err != nil {
 		t.Error("db view error", err)
 	}
@@ -66,9 +63,45 @@ func TestRowObject(t *testing.T) {
 	if row.Err != nil {
 		t.Error("row error not nil", row.Err)
 	}
+
+	designDB.Delete(row.ID)
 }
 
-func TestViewMultiGet(t *testing.T)        {}
+func TestViewMultiGet(t *testing.T) {
+	for i := 1; i < 6; i++ {
+		designDB.Save(map[string]interface{}{"i": i}, nil)
+	}
+
+	designDB.Set("_design/test", map[string]interface{}{
+		"language": "javascript",
+		"views": map[string]interface{}{
+			"multi_key": map[string]string{
+				"map": "function(doc) { emit(doc.i, null); }",
+			},
+		},
+	})
+
+	results, err := designDB.View("test/multi_key", nil, map[string]interface{}{"keys": []int{1, 3, 5}})
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	rows, err := results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	if len(rows) != 3 {
+		t.Errorf("rows length %d want 3", len(rows))
+	}
+
+	for idx, i := range []int{1, 3, 5} {
+		if i != int(rows[idx].Key.(float64)) {
+			t.Errorf("key = %d want %d", int(rows[idx].Key.(float64)), i)
+		}
+	}
+}
+
 func TestDesignDocInfo(t *testing.T)       {}
 func TestViewCompaction(t *testing.T)      {}
 func TestViewCleanup(t *testing.T)         {}
