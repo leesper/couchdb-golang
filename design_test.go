@@ -165,15 +165,52 @@ func TestViewCleanup(t *testing.T) {
 		t.Error("db cleanup error", err)
 	}
 }
-func TestViewFunctionObjects(t *testing.T) {}
-func TestInitWithResource(t *testing.T)    {}
-func TestIterView(t *testing.T)            {}
-func TestUpdateSeq(t *testing.T)           {}
-func TestTmpviewRepr(t *testing.T)         {}
-func TestWrapperIter(t *testing.T)         {}
-func TestWrapperRows(t *testing.T)         {}
-func TestProperties(t *testing.T)          {}
-func TestRowRepr(t *testing.T)             {}
+
+func TestViewWrapperFunction(t *testing.T) {
+	ddoc, err := designDB.Get("_design/test", nil)
+	if err != nil {
+		t.Error("db get error", err)
+	}
+
+	ddoc["views"] = map[string]interface{}{
+		"ids":       map[string]string{"map": "function(doc) { emit(doc._id, null); }"},
+		"multi_key": map[string]string{"map": "function(doc) { emit(doc.i, null); }"},
+	}
+	_, err = designDB.Update([]map[string]interface{}{ddoc}, nil)
+	if err != nil {
+		t.Error("db set error", err)
+	}
+
+	results, err := designDB.View("test/multi_key", func(row Row) Row {
+		key := row.Key.(float64)
+		key *= key
+		row.Key = int(key)
+		return row
+	}, nil)
+
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	rows, err := results.Rows()
+	if err != nil {
+		t.Error("rows error", err)
+	}
+
+	for idx, i := range []int{1, 4, 9, 16, 25} {
+		if i != rows[idx].Key.(int) {
+			t.Errorf("key = %d want %d", rows[idx].Key.(int), i)
+		}
+	}
+}
+
+func TestIterView(t *testing.T)    {}
+func TestUpdateSeq(t *testing.T)   {}
+func TestTmpviewRepr(t *testing.T) {}
+func TestWrapperIter(t *testing.T) {}
+func TestWrapperRows(t *testing.T) {}
+func TestProperties(t *testing.T)  {}
+func TestRowRepr(t *testing.T)     {}
 
 //
 func TestAllRows(t *testing.T)            {}

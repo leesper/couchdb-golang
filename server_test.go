@@ -327,7 +327,7 @@ func TestMain(m *testing.M) {
 	// tear down
 	server.Delete("golang-tests")
 	server.Delete("golang-movies")
-	// server.Delete("golang-design")
+	server.Delete("golang-design")
 	os.Exit(code)
 }
 
