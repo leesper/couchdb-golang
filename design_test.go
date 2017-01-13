@@ -102,8 +102,37 @@ func TestViewMultiGet(t *testing.T) {
 	}
 }
 
-func TestDesignDocInfo(t *testing.T)       {}
-func TestViewCompaction(t *testing.T)      {}
+func TestDesignDocInfo(t *testing.T) {
+	designDB.Set("_design/test", map[string]interface{}{
+		"language": "javascript",
+		"views": map[string]interface{}{
+			"test": map[string]string{"map": "function(doc) { emit(doc.type, null); }"},
+		},
+	})
+	info, _ := designDB.Info("test")
+	compactRunning := info["view_index"].(map[string]interface{})["compact_running"].(bool)
+	if compactRunning {
+		t.Error("compact running true want false")
+	}
+}
+
+func TestViewCompaction(t *testing.T) {
+	designDB.Set("_design/test", map[string]interface{}{
+		"language": "javascript",
+		"views": map[string]interface{}{
+			"multi_key": map[string]string{"map": "function(doc) { emit(doc.i, null); }"},
+		},
+	})
+
+	_, err := designDB.View("test/multi_key", nil, nil)
+	if err != nil {
+		t.Error("db view error", err)
+	}
+	err = designDB.Compact()
+	if err != nil {
+		t.Error("db compact error", err)
+	}
+}
 func TestViewCleanup(t *testing.T)         {}
 func TestViewFunctionObjects(t *testing.T) {}
 func TestInitWithResource(t *testing.T)    {}

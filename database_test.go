@@ -284,12 +284,12 @@ func TestDocRevs(t *testing.T) {
 		t.Error("db compact error", err)
 	}
 
-	info, err := testsDB.Info()
+	info, err := testsDB.Info("")
 	if err != nil {
 		t.Error(`db info error`, err)
 	}
 	for info["compact_running"].(bool) {
-		info, err = testsDB.Info()
+		info, err = testsDB.Info("")
 		if err != nil {
 			t.Error(`db info error`, err)
 		}

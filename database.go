@@ -291,19 +291,27 @@ func (d *Database) DocIDs() ([]string, error) {
 // Name returns the name of database.
 func (d *Database) Name() (string, error) {
 	var name string
-	info, err := d.Info()
+	info, err := d.Info("")
 	if err != nil {
 		return name, err
 	}
 	return info["db_name"].(string), nil
 }
 
-// Info returns the information about the database
-func (d *Database) Info() (map[string]interface{}, error) {
-	_, data, err := d.resource.GetJSON("", nil, url.Values{})
-
-	if err != nil {
-		return nil, err
+// Info returns the information about the database or design document
+func (d *Database) Info(ddoc string) (map[string]interface{}, error) {
+	var data []byte
+	var err error
+	if ddoc == "" {
+		_, data, err = d.resource.GetJSON("", nil, url.Values{})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_, data, err = d.resource.GetJSON(fmt.Sprintf("_design/%s/_info", ddoc), nil, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var info map[string]interface{}
@@ -569,7 +577,7 @@ func (d *Database) GetSecurity() (map[string]interface{}, error) {
 
 // Len returns the number of documents stored in it.
 func (d *Database) Len() (int, error) {
-	info, err := d.Info()
+	info, err := d.Info("")
 	if err != nil {
 		return 0, err
 	}
