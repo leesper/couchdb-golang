@@ -133,7 +133,38 @@ func TestViewCompaction(t *testing.T) {
 		t.Error("db compact error", err)
 	}
 }
-func TestViewCleanup(t *testing.T)         {}
+
+func TestViewCleanup(t *testing.T) {
+	designDB.Set("_design/test", map[string]interface{}{
+		"language": "javascript",
+		"views": map[string]interface{}{
+			"multi_key": map[string]string{"map": "function(doc) { emit(doc.i, null); }"},
+		},
+	})
+
+	_, err := designDB.View("test/multi_key", nil, nil)
+	if err != nil {
+		t.Error("db view error", err)
+	}
+
+	ddoc, err := designDB.Get("_design/test", nil)
+	if err != nil {
+		t.Error("db get error", err)
+	}
+	ddoc["views"] = map[string]interface{}{
+		"ids": map[string]string{"map": "function(doc) { emit(doc._id, null); }"},
+	}
+	_, err = designDB.Update([]map[string]interface{}{ddoc}, nil)
+	if err != nil {
+		t.Error("db update error", err)
+	}
+
+	designDB.View("test/ids", nil, nil)
+	err = designDB.Cleanup()
+	if err != nil {
+		t.Error("db cleanup error", err)
+	}
+}
 func TestViewFunctionObjects(t *testing.T) {}
 func TestInitWithResource(t *testing.T)    {}
 func TestIterView(t *testing.T)            {}
