@@ -1368,3 +1368,8 @@ func (d *Database) View(name string, wrapper func(Row) Row, options map[string]i
 	designDocPath := designPath(name, "_view")
 	return NewViewResults(d.resource, designDocPath, options, wrapper), nil
 }
+
+// IterView returns a channel fetching rows in batches which iterates a row at a time.
+func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, options map[string]interface{}) (<-chan *ViewResults, error) {
+	return nil, errors.New("not implemented")
+}

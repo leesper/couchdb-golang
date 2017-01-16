@@ -1,7 +1,7 @@
 package couchdb
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -13,6 +13,7 @@ var (
 	testsDB  *Database
 	movieDB  *Database
 	designDB *Database
+	iterDB   *Database
 	movies   = []map[string]interface{}{
 		{
 			"_id":     "976059",
@@ -290,45 +291,88 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// setup
-	var err error
-	server, err = NewServer("http://localhost:5984")
-	if err != nil {
-		os.Exit(1)
-	}
+	setup()
+	code := m.Run()
+	teardown()
+	os.Exit(code)
+}
 
-	server.Delete("golang-tests")
-	testsDB, err = server.Create("golang-tests")
-	if err != nil {
-		os.Exit(2)
-	}
+func setup() {
+	setupServer("http://localhost:5984", 1)
 
-	server.Delete("golang-movies")
-	movieDB, err = server.Create("golang-movies")
-	if err != nil {
-		log.Println("create error", err)
-		os.Exit(3)
-	}
-	_, err = movieDB.Update(movies, nil)
+	testsDB = setupDB("golang-tests", testsDB, 2)
+
+	movieDB = setupDB("golang-movies", movieDB, 3)
+	_, err := movieDB.Update(movies, nil)
 	if err != nil {
 		os.Exit(4)
 	}
 
-	server.Delete("golang-design")
-	designDB, err = server.Create("golang-design")
-	if err != nil {
-		log.Println("create error", err)
-		os.Exit(5)
+	designDB = setupDB("golang-design", designDB, 5)
+
+	iterDB = setupDB("golang-iter", iterDB, 6)
+	designDoc := map[string]interface{}{
+		"_id": "_design/test",
+		"views": map[string]interface{}{
+			"nums":  map[string]string{"map": "function(doc) { emit(doc.num, null); }"},
+			"nulls": map[string]string{"map": "function(doc) { emit(null, null); }"},
+		},
 	}
+	_, _, err = iterDB.Save(designDoc, nil)
+	if err != nil {
+		os.Exit(7)
+	}
+	const NumDocs = 100
+	numDocs := []map[string]interface{}{}
+	for num := 0; num < NumDocs; num++ {
+		doc := docFromNum(num)
+		numDocs = append(numDocs, doc)
+	}
+	_, err = iterDB.Update(numDocs, nil)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(8)
+	}
+}
 
-	// run all the tests
-	code := m.Run()
-
-	// tear down
+func teardown() {
 	server.Delete("golang-tests")
 	server.Delete("golang-movies")
 	server.Delete("golang-design")
-	os.Exit(code)
+	server.Delete("golang-iter")
+}
+
+func setupServer(url string, exitCode int) {
+	var err error
+	server, err = NewServer(url)
+	if err != nil {
+		os.Exit(exitCode)
+	}
+	server.Version()
+}
+
+func setupDB(name string, db *Database, exitCode int) *Database {
+	server.Delete(name)
+	var err error
+	db, err = server.Create(name)
+	if err != nil {
+		os.Exit(2)
+	}
+	return db
+}
+
+func docFromNum(num int) map[string]interface{} {
+	return map[string]interface{}{
+		"_id": fmt.Sprintf("%d", num),
+		"num": int(num / 2),
+	}
+}
+
+func docFromRow(row Row) map[string]interface{} {
+	return map[string]interface{}{
+		"_id": row.ID,
+		"num": row.Key,
+	}
 }
 
 func TestNewServer(t *testing.T) {
