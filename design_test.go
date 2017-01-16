@@ -3,7 +3,6 @@ package couchdb
 import (
 	"errors"
 	"fmt"
-	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -457,25 +456,40 @@ func testViewResults(vch <-chan *ViewResults, begin, end, incr int) error {
 		}
 		rowsCollected = append(rowsCollected, rows...)
 	}
-	length := int(math.Abs(float64(end - begin)))
-	if len(rowsCollected) != length {
-		return fmt.Errorf("number of docs %d want %d", len(rowsCollected), length)
+
+	nums := iterateSlice(begin, end, incr)
+	if len(rowsCollected) != len(nums) {
+		return fmt.Errorf("number of docs %d want %d", len(rowsCollected), len(nums))
 	}
 
-	docsLeft := []map[string]interface{}{}
-	for _, row := range rowsCollected {
-		docsLeft = append(docsLeft, docFromRow(row))
+	docsLeft := make([]map[string]interface{}, len(nums))
+	for idx, row := range rowsCollected {
+		docsLeft[idx] = docFromRow(row)
 	}
 
-	docsRight := []map[string]interface{}{}
-	for i := begin; i < end; i += incr {
-		docsRight = append(docsRight, docFromNum(i))
+	docsRight := make([]map[string]interface{}, len(nums))
+	for idx, num := range nums {
+		docsRight[idx] = docFromNum(num)
 	}
 
 	if !reflect.DeepEqual(docsLeft, docsRight) {
 		return errors.New("doc from row not equal to doc from num")
 	}
 	return nil
+}
+
+func iterateSlice(begin, end, incr int) []int {
+	s := []int{}
+	if begin <= end {
+		for i := begin; i < end; i += incr {
+			s = append(s, i)
+		}
+	} else {
+		for i := begin; i > end; i += incr {
+			s = append(s, i)
+		}
+	}
+	return s
 }
 
 func TestDescending(t *testing.T) {
