@@ -1,6 +1,10 @@
 package couchdb
 
 import (
+	"errors"
+	"fmt"
+	"math"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -297,10 +301,233 @@ func TestRowRepr(t *testing.T) {
 }
 
 //
-func TestAllRows(t *testing.T)            {}
-func TestBatchSizes(t *testing.T)         {}
-func TestBatchSizesWithSkip(t *testing.T) {}
-func TestLimit(t *testing.T)              {}
-func TestDescending(t *testing.T)         {}
-func TestStartKey(t *testing.T)           {}
-func TestNullKeys(t *testing.T)           {}
+func TestAllRows(t *testing.T) {
+	vch, err := iterDB.IterView("test/nums", 10, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+
+	err = testViewResults(vch, 0, NumDocs, 1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+}
+
+func TestBatchSizes(t *testing.T) {
+	_, err := iterDB.IterView("test/nums", 0, nil, nil)
+	if err != ErrBatchValue {
+		t.Fatalf("db iter view %s want %s", err, ErrBatchValue)
+	}
+
+	_, err = iterDB.IterView("test/nums", -1, nil, nil)
+	if err != ErrBatchValue {
+		t.Fatalf("db iter view %s want %s", err, ErrBatchValue)
+	}
+
+	vch, err := iterDB.IterView("test/nums", 1, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", NumDocs/2, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", NumDocs*2, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", NumDocs-1, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", NumDocs, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", NumDocs+1, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Fatal("test view results length error", err)
+	}
+}
+
+func testViewResultsLength(vch <-chan *ViewResults, length int) error {
+	total := 0
+	var rows []Row
+	var err error
+	for v := range vch {
+		rows, err = v.Rows()
+		if err != nil {
+			return err
+		}
+		total += len(rows)
+	}
+	if total != length {
+		return fmt.Errorf("length %d want %d", total, length)
+	}
+	return nil
+}
+
+func TestBatchSizesWithSkip(t *testing.T) {
+	vch, err := iterDB.IterView("test/nums", NumDocs/10, nil, map[string]interface{}{
+		"skip": NumDocs / 2,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+
+	err = testViewResultsLength(vch, NumDocs/2)
+	if err != nil {
+		t.Error("test batch sizes with skip error", err)
+	}
+}
+
+func TestLimit(t *testing.T) {
+	var limit int
+	var err error
+	var vch <-chan *ViewResults
+	_, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+		"limit": limit,
+	})
+	if err != ErrLimitValue {
+		t.Fatalf("db iter view %s want %s", err, ErrLimitValue)
+	}
+
+	for _, limit = range []int{1, NumDocs / 4, NumDocs - 1, NumDocs, NumDocs + 1} {
+		vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+			"limit": limit,
+		})
+		if err != nil {
+			t.Fatal("db iter view error", err)
+		}
+		err = testViewResults(vch, 0, limit, 1)
+		if err != nil {
+			t.Fatal("test view results error", err)
+		}
+	}
+
+	limit = NumDocs / 4
+	vch, err = iterDB.IterView("test/nums", limit, nil, map[string]interface{}{
+		"limit": limit,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+
+	err = testViewResults(vch, 0, limit, 1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+}
+
+func testViewResults(vch <-chan *ViewResults, begin, end, incr int) error {
+	rowsCollected := []Row{}
+	for results := range vch {
+		rows, err := results.Rows()
+		if err != nil {
+			return err
+		}
+		rowsCollected = append(rowsCollected, rows...)
+	}
+	length := int(math.Abs(float64(end - begin)))
+	if len(rowsCollected) != length {
+		return fmt.Errorf("number of docs %d want %d", len(rowsCollected), length)
+	}
+
+	docsLeft := []map[string]interface{}{}
+	for _, row := range rowsCollected {
+		docsLeft = append(docsLeft, docFromRow(row))
+	}
+
+	docsRight := []map[string]interface{}{}
+	for i := begin; i < end; i += incr {
+		docsRight = append(docsRight, docFromNum(i))
+	}
+
+	if !reflect.DeepEqual(docsLeft, docsRight) {
+		return errors.New("doc from row not equal to doc from num")
+	}
+	return nil
+}
+
+func TestDescending(t *testing.T) {
+	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"descending": true})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(vch, NumDocs-1, -1, -1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+		"descending": true,
+		"limit":      NumDocs / 4,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(vch, NumDocs-1, NumDocs*3/4-1, -1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+}
+
+func TestStartKey(t *testing.T) {
+	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": NumDocs/2 - 1})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(vch, NumDocs-2, NumDocs, 1)
+	if err != nil {
+		t.Fatal("test view results error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": 1, "descending": true})
+	if err != nil {
+		t.Error("db iter view error", err)
+	}
+	err = testViewResults(vch, 3, -1, -1)
+	if err != nil {
+		t.Error("teset view results error", err)
+	}
+}
+
+func TestNullKeys(t *testing.T) {
+	vch, err := iterDB.IterView("test/nulls", 10, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Error("test view results length error", err)
+	}
+}

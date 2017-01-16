@@ -22,6 +22,13 @@ const (
 	DefaultBaseURL = "http://localhost:5984"
 )
 
+var (
+	// ErrBatchValue for invalid batch parameter of IterView
+	ErrBatchValue = errors.New("batch must be 1 or more")
+	// ErrLimitValue for invalid limit parameter of IterView
+	ErrLimitValue = errors.New("limit must be 1 or more")
+)
+
 // getDefaultCouchDBURL returns the default CouchDB server url.
 func getDefaultCouchDBURL() string {
 	var couchdbURLEnviron string

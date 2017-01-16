@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+const (
+	NumDocs = 100
+)
+
 var (
 	server   *Server
 	testsDB  *Database
@@ -322,11 +326,10 @@ func setup() {
 	if err != nil {
 		os.Exit(7)
 	}
-	const NumDocs = 100
-	numDocs := []map[string]interface{}{}
+	numDocs := make([]map[string]interface{}, NumDocs)
 	for num := 0; num < NumDocs; num++ {
 		doc := docFromNum(num)
-		numDocs = append(numDocs, doc)
+		numDocs[num] = doc
 	}
 	_, err = iterDB.Update(numDocs, nil)
 	if err != nil {
@@ -378,7 +381,7 @@ func docFromRow(row Row) map[string]interface{} {
 func TestNewServer(t *testing.T) {
 	testServer, err := NewServer(DefaultBaseURL)
 	if err != nil {
-		t.Error(`new server error`, err)
+		t.Fatal(`new server error`, err)
 	}
 	_, err = testServer.Version()
 	if err != nil {
@@ -389,7 +392,7 @@ func TestNewServer(t *testing.T) {
 func TestNewServerNoFullCommit(t *testing.T) {
 	testServer, err := NewServerNoFullCommit(DefaultBaseURL)
 	if err != nil {
-		t.Error(`new server full commit error`, err)
+		t.Fatal(`new server full commit error`, err)
 	}
 	_, err = testServer.Version()
 	if err != nil {
@@ -402,7 +405,6 @@ func TestServerExists(t *testing.T) {
 	if err != nil {
 		t.Error(`new server error`, err)
 	}
-
 	_, err = testServer.Version()
 	if err == nil {
 		t.Error(`server version ok`)
