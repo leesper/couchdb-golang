@@ -503,26 +503,26 @@ func TestDescending(t *testing.T) {
 	}
 }
 
-// func TestStartKey(t *testing.T) {
-// 	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": NumDocs/2 - 1})
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-// 	err = testViewResults(vch, NumDocs-2, NumDocs, 1)
-// 	if err != nil {
-// 		t.Fatal("test view results error", err)
-// 	}
-//
-// 	vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": 1, "descending": true})
-// 	if err != nil {
-// 		t.Error("db iter view error", err)
-// 	}
-// 	err = testViewResults(vch, 3, -1, -1)
-// 	if err != nil {
-// 		t.Error("teset view results error", err)
-// 	}
-// }
-//
+func TestStartKey(t *testing.T) {
+	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": NumDocs/2 - 1})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(vch, NumDocs-2, NumDocs, 1)
+	if err != nil {
+		t.Fatal("test view results error", err)
+	}
+
+	vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": 1, "descending": true})
+	if err != nil {
+		t.Error("db iter view error", err)
+	}
+	err = testViewResults(vch, 3, -1, -1)
+	if err != nil {
+		t.Error("teset view results error", err)
+	}
+}
+
 // func TestNullKeys(t *testing.T) {
 // 	vch, err := iterDB.IterView("test/nulls", 10, nil, nil)
 // 	if err != nil {
