@@ -523,13 +523,13 @@ func TestStartKey(t *testing.T) {
 	}
 }
 
-// func TestNullKeys(t *testing.T) {
-// 	vch, err := iterDB.IterView("test/nulls", 10, nil, nil)
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-// 	err = testViewResultsLength(vch, NumDocs)
-// 	if err != nil {
-// 		t.Error("test view results length error", err)
-// 	}
-// }
+func TestNullKeys(t *testing.T) {
+	vch, err := iterDB.IterView("test/nulls", 10, nil, nil)
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResultsLength(vch, NumDocs)
+	if err != nil {
+		t.Error("test view results length error", err)
+	}
+}
