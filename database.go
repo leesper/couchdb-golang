@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -1377,6 +1378,65 @@ func (d *Database) View(name string, wrapper func(Row) Row, options map[string]i
 }
 
 // IterView returns a channel fetching rows in batches which iterates a row at a time.
-func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, options map[string]interface{}) (<-chan *ViewResults, error) {
-	return nil, errors.New("not implemented")
+func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, options map[string]interface{}) (<-chan Row, error) {
+	if batch <= 0 {
+		return nil, ErrBatchValue
+	}
+
+	if options == nil {
+		options = map[string]interface{}{}
+	}
+
+	_, ok := options["limit"]
+	var limit int
+	if ok {
+		if options["limit"].(int) <= 0 {
+			return nil, ErrLimitValue
+		}
+		limit = options["limit"].(int)
+	}
+
+	// Row generator
+	rchan := make(chan Row)
+	var err error
+	go func() {
+		defer close(rchan)
+		for {
+			loopLimit := batch
+			if ok {
+				loopLimit = min(batch, limit)
+			}
+			options["limit"] = loopLimit + 1
+			var results *ViewResults
+			results, err = d.View(name, wrapper, options)
+			if err != nil {
+				break
+			}
+			var rows []Row
+			rows, err = results.Rows()
+			if err != nil {
+				break
+			}
+			// truncate the rows, removing the last one
+			for _, row := range rows[:min(len(rows), loopLimit)] {
+				rchan <- row
+			}
+
+			if ok {
+				limit -= min(len(rows), batch)
+			}
+
+			if len(rows) <= batch || (ok && limit == 0) {
+				break
+			}
+			options["startkey"] = rows[len(rows)-1].Key
+			options["startkey_docid"] = rows[len(rows)-1].ID
+			options["skip"] = 0
+		}
+	}()
+	return rchan, nil
+}
+
+func min(a, b int) int {
+	return int(math.Min(float64(a), float64(b)))
 }

@@ -374,7 +374,7 @@ func docFromNum(num int) map[string]interface{} {
 func docFromRow(row Row) map[string]interface{} {
 	return map[string]interface{}{
 		"_id": row.ID,
-		"num": row.Key,
+		"num": int(row.Key.(float64)),
 	}
 }
 
