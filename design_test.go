@@ -317,7 +317,7 @@ func testViewResults(rch <-chan Row, begin, end, incr int) error {
 	}
 
 	nums := iterateSlice(begin, end, incr)
-	if len(rowsCollected) != len(nums) {
+	if len(rowsCollected) != min(len(nums), NumDocs) {
 		return fmt.Errorf("number of docs %d want %d", len(rowsCollected), len(nums))
 	}
 
@@ -327,7 +327,7 @@ func testViewResults(rch <-chan Row, begin, end, incr int) error {
 	}
 
 	docsRight := make([]map[string]interface{}, len(nums))
-	for idx, num := range nums {
+	for idx, num := range nums[:min(len(rowsCollected), NumDocs)] {
 		docsRight[idx] = docFromNum(num)
 	}
 
@@ -428,81 +428,81 @@ func testViewResultsLength(rch <-chan Row, length int) error {
 	return nil
 }
 
-// func TestBatchSizesWithSkip(t *testing.T) {
-// 	vch, err := iterDB.IterView("test/nums", NumDocs/10, nil, map[string]interface{}{
-// 		"skip": NumDocs / 2,
-// 	})
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-//
-// 	err = testViewResultsLength(vch, NumDocs/2)
-// 	if err != nil {
-// 		t.Error("test batch sizes with skip error", err)
-// 	}
-// }
+func TestBatchSizesWithSkip(t *testing.T) {
+	rch, err := iterDB.IterView("test/nums", NumDocs/10, nil, map[string]interface{}{
+		"skip": NumDocs / 2,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
 
-// func TestLimit(t *testing.T) {
-// 	var limit int
-// 	var err error
-// 	var vch <-chan *ViewResults
-// 	_, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
-// 		"limit": limit,
-// 	})
-// 	if err != ErrLimitValue {
-// 		t.Fatalf("db iter view %s want %s", err, ErrLimitValue)
-// 	}
-//
-// 	for _, limit = range []int{1, NumDocs / 4, NumDocs - 1, NumDocs, NumDocs + 1} {
-// 		vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
-// 			"limit": limit,
-// 		})
-// 		if err != nil {
-// 			t.Fatal("db iter view error", err)
-// 		}
-// 		err = testViewResults(vch, 0, limit, 1)
-// 		if err != nil {
-// 			t.Fatal("test view results error", err)
-// 		}
-// 	}
-//
-// 	limit = NumDocs / 4
-// 	vch, err = iterDB.IterView("test/nums", limit, nil, map[string]interface{}{
-// 		"limit": limit,
-// 	})
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-//
-// 	err = testViewResults(vch, 0, limit, 1)
-// 	if err != nil {
-// 		t.Error("test view results error", err)
-// 	}
-// }
+	err = testViewResultsLength(rch, NumDocs/2)
+	if err != nil {
+		t.Error("test batch sizes with skip error", err)
+	}
+}
 
-// func TestDescending(t *testing.T) {
-// 	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"descending": true})
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-// 	err = testViewResults(vch, NumDocs-1, -1, -1)
-// 	if err != nil {
-// 		t.Error("test view results error", err)
-// 	}
-//
-// 	vch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
-// 		"descending": true,
-// 		"limit":      NumDocs / 4,
-// 	})
-// 	if err != nil {
-// 		t.Fatal("db iter view error", err)
-// 	}
-// 	err = testViewResults(vch, NumDocs-1, NumDocs*3/4-1, -1)
-// 	if err != nil {
-// 		t.Error("test view results error", err)
-// 	}
-// }
-//
+func TestLimit(t *testing.T) {
+	var limit int
+	var err error
+	var rch <-chan Row
+	_, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+		"limit": limit,
+	})
+	if err != ErrLimitValue {
+		t.Fatalf("db iter view %s want %s", err, ErrLimitValue)
+	}
+
+	for _, limit = range []int{1, NumDocs / 4, NumDocs - 1, NumDocs, NumDocs + 1} {
+		rch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+			"limit": limit,
+		})
+		if err != nil {
+			t.Fatal("db iter view error", err)
+		}
+		err = testViewResults(rch, 0, limit, 1)
+		if err != nil {
+			t.Fatal("test view results error", err)
+		}
+	}
+
+	limit = NumDocs / 4
+	rch, err = iterDB.IterView("test/nums", limit, nil, map[string]interface{}{
+		"limit": limit,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+
+	err = testViewResults(rch, 0, limit, 1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+}
+
+func TestDescending(t *testing.T) {
+	rch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"descending": true})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(rch, NumDocs-1, -1, -1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+
+	rch, err = iterDB.IterView("test/nums", 10, nil, map[string]interface{}{
+		"descending": true,
+		"limit":      NumDocs / 4,
+	})
+	if err != nil {
+		t.Fatal("db iter view error", err)
+	}
+	err = testViewResults(rch, NumDocs-1, NumDocs*3/4-1, -1)
+	if err != nil {
+		t.Error("test view results error", err)
+	}
+}
+
 // func TestStartKey(t *testing.T) {
 // 	vch, err := iterDB.IterView("test/nums", 10, nil, map[string]interface{}{"startkey": NumDocs/2 - 1})
 // 	if err != nil {

@@ -3,6 +3,9 @@ CouchDB-Golang Library v1.0
 
 A Golang library for working with CouchDB 2.x
 
+supported Golang version:
+* 1.7.x
+
 [![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang)
 
 * Resource : a simple wrapper for HTTP requests and error handling
