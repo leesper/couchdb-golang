@@ -41,8 +41,8 @@ type ViewResults struct {
 	err       error
 }
 
-// NewViewResults returns a newly-allocated *ViewResults
-func NewViewResults(r *Resource, ddoc string, opt map[string]interface{}, wr func(Row) Row) *ViewResults {
+// newViewResults returns a newly-allocated *ViewResults
+func newViewResults(r *Resource, ddoc string, opt map[string]interface{}, wr func(Row) Row) *ViewResults {
 	return &ViewResults{
 		resource:  r,
 		designDoc: ddoc,
@@ -179,4 +179,46 @@ func (vr *ViewResults) fetch() ([]Row, error) {
 		rows[idx] = row
 	}
 	return rows, nil
+}
+
+// ViewDefinition is a definition of view stored in a specific design document.
+type ViewDefinition struct{}
+
+// NewViewDefinition returns a newly-created *ViewDefinition.
+// design: the name of the design document.
+//
+// name: the name of the view.
+//
+// mapFun: the map function code.
+//
+// reduceFun: the reduce function code(optional).
+//
+// language: the name of the programming language used.
+//
+// wrapper: an optional function for processing the result rows after retrieved.
+//
+// options: view specific options.
+func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) {
+}
+
+// GetDoc retrieves the design document corresponding to this view definition from
+// the given database.
+func (vd *ViewDefinition) GetDoc(db *Database) {}
+
+// Sync ensures that the view stored in the database matches the view defined by this instance.
+func (vd *ViewDefinition) Sync(db *Database) {}
+
+// SyncMany ensures that the views stored in the database match the views defined
+// by the corresponding view definitions. This function might update more than
+// one design document. This is done using CouchDB's bulk update to ensure atomicity of the opeation.
+// db: the corresponding database.
+//
+// viewDefns: a sequence of *ViewDefinition instances.
+//
+// removeMissing: whether to remove views found in a design document that are not
+// found in the list of ViewDefinition instances.
+//
+// callback: a callback function invoked when a design document gets updated;
+// it is called before the doc has actually been saved back to the database.
+func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, callback func(map[string]interface{})) {
 }

@@ -533,3 +533,7 @@ func TestNullKeys(t *testing.T) {
 		t.Error("test view results length error", err)
 	}
 }
+
+func TestViewDefinitionOptions(t *testing.T)  {}
+func TestRetrieveViewDefinition(t *testing.T) {}
+func TestSyncMany(t *testing.T)               {}

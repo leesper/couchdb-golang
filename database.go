@@ -1297,11 +1297,14 @@ func beautifulJSONString(jsonable interface{}) (string, error) {
 }
 
 // PutIndex creates a new index in database.
+//
 // indexFields: a JSON array of field names following the sort syntax.
+//
 // ddoc: optional, name of the design document in which the index will be created.
 // By default each index will be created in its own design document. Indexes can be
 // grouped into design documents for efficiency. However a change to one index
 // in a design document will invalidate all other indexes in the same document.
+//
 // name: optional, name of the index. A name generated automatically if not provided.
 func (d *Database) PutIndex(indexFields []string, ddoc, name string) (string, string, error) {
 	var design, index string
@@ -1372,12 +1375,26 @@ func designPath(designDoc, designType string) string {
 }
 
 // View executes a predefined design document view and returns the results.
+//
+// name: the name of the view, for user-defined views use the format "design_docid/viewname",
+// that is, the document ID of the design document and the name of the view, separated by a /.
+//
+// wrapper: an optional function for processing the result rows after retrieved.
+//
+// options: optional query parameters.
 func (d *Database) View(name string, wrapper func(Row) Row, options map[string]interface{}) (*ViewResults, error) {
 	designDocPath := designPath(name, "_view")
-	return NewViewResults(d.resource, designDocPath, options, wrapper), nil
+	return newViewResults(d.resource, designDocPath, options, wrapper), nil
 }
 
 // IterView returns a channel fetching rows in batches which iterates a row at a time(pagination).
+//
+// name: the name of the view, for user-defined views use the format "design_docid/viewname",
+// that is, the document ID of the design document and the name of the view, separated by a /.
+//
+// wrapper: an optional function for processing the result rows after retrieved.
+//
+// options: optional query parameters.
 func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, options map[string]interface{}) (<-chan Row, error) {
 	if batch <= 0 {
 		return nil, ErrBatchValue
