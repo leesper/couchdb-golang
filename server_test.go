@@ -342,7 +342,7 @@ func teardown() {
 	server.Delete("golang-tests")
 	server.Delete("golang-movies")
 	server.Delete("golang-design")
-	server.Delete("golang-iter")
+	// server.Delete("golang-iter")
 }
 
 func setupServer(url string, exitCode int) {

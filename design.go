@@ -93,14 +93,24 @@ func (vr *ViewResults) fetch() ([]Row, error) {
 	params := url.Values{}
 	for key, val := range vr.options {
 		switch key {
-		case "keys":
+		case "keys": // json-array, put it in body and send POST request
 			body[key] = val
-		default:
+		case "key", "startkey", "start_key", "endkey", "end_key": // json
 			data, err = json.Marshal(val)
 			if err != nil {
 				return nil, err
 			}
 			params.Add(key, string(data))
+		case "conflicts", "descending", "group", "include_docs", "attachments", "att_encoding_info", "inclusive_end", "reduce", "sorted", "update_seq": // boolean
+			if val.(bool) {
+				params.Add(key, "true")
+			} else {
+				params.Add(key, "false")
+			}
+		case "endkey_docid", "end_key_doc_id", "stale", "startkey_docid", "start_key_doc_id": // string
+			params.Add(key, val.(string))
+		case "group_level", "limit", "skip": // number
+			params.Add(key, fmt.Sprintf("%d", val.(int)))
 		}
 	}
 

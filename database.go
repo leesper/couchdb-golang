@@ -1377,7 +1377,7 @@ func (d *Database) View(name string, wrapper func(Row) Row, options map[string]i
 	return NewViewResults(d.resource, designDocPath, options, wrapper), nil
 }
 
-// IterView returns a channel fetching rows in batches which iterates a row at a time.
+// IterView returns a channel fetching rows in batches which iterates a row at a time(pagination).
 func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, options map[string]interface{}) (<-chan Row, error) {
 	if batch <= 0 {
 		return nil, ErrBatchValue
@@ -1406,6 +1406,7 @@ func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, optio
 			if ok {
 				loopLimit = min(batch, limit)
 			}
+			// get rows in batch with one extra for start of next batch
 			options["limit"] = loopLimit + 1
 			var results *ViewResults
 			results, err = d.View(name, wrapper, options)
@@ -1417,7 +1418,8 @@ func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, optio
 			if err != nil {
 				break
 			}
-			// truncate the rows, removing the last one
+
+			// send all rows to channel except the last extra one
 			for _, row := range rows[:min(len(rows), loopLimit)] {
 				rchan <- row
 			}
