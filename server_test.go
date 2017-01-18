@@ -18,6 +18,7 @@ var (
 	movieDB  *Database
 	designDB *Database
 	iterDB   *Database
+	defnDB   *Database
 	movies   = []map[string]interface{}{
 		{
 			"_id":     "976059",
@@ -336,13 +337,16 @@ func setup() {
 		fmt.Println(err)
 		os.Exit(8)
 	}
+
+	defnDB = setupDB("golang-defn", defnDB, 9)
 }
 
 func teardown() {
 	server.Delete("golang-tests")
 	server.Delete("golang-movies")
 	server.Delete("golang-design")
-	// server.Delete("golang-iter")
+	server.Delete("golang-iter")
+	server.Delete("golang-defn")
 }
 
 func setupServer(url string, exitCode int) {

@@ -535,18 +535,21 @@ func TestNullKeys(t *testing.T) {
 
 func TestViewDefinitionOptions(t *testing.T) {
 	options := map[string]interface{}{"collation": "raw"}
-	view := NewViewDefinition("foo", "foo", "function(doc) { emit(doc._id, doc._rev); }", "", "", nil, options)
-	_, err := view.Sync(designDB)
+	view, err := NewViewDefinition("bar", "baz", "function(doc) { emit(doc._id, doc._rev); }", "", "", nil, options)
+	if err != nil {
+		t.Fatal("create view definition error", err)
+	}
+	_, err = view.Sync(defnDB)
 	if err != nil {
 		t.Fatal("view definition sync error", err)
 	}
 
-	designDoc, err := designDB.Get("_design/foo", nil)
+	designDoc, err := defnDB.Get("_design/bar", nil)
 	if err != nil {
 		t.Fatal("db get error", err)
 	}
 
-	designOptions := designDoc["views"].(map[string]interface{})["foo"].(map[string]interface{})["options"]
+	designOptions := designDoc["views"].(map[string]interface{})["baz"].(map[string]interface{})["options"]
 
 	if !reflect.DeepEqual(options, designOptions) {
 		t.Error("options not identical")
@@ -554,8 +557,11 @@ func TestViewDefinitionOptions(t *testing.T) {
 }
 
 func TestRetrieveViewDefinition(t *testing.T) {
-	view := NewViewDefinition("foo", "bar", "baz", "", "", nil, nil)
-	results, err := view.Sync(designDB)
+	view, err := NewViewDefinition("foo", "bar", "baz", "", "", nil, nil)
+	if err != nil {
+		t.Fatal("create view definition error", err)
+	}
+	results, err := view.Sync(defnDB)
 	if err != nil {
 		t.Fatal("view definition sync error", err)
 	}
@@ -564,34 +570,36 @@ func TestRetrieveViewDefinition(t *testing.T) {
 		t.Fatal("no results returned")
 	}
 
-	if results[0].Err != nil {
-		t.Error("update result error", results[0].Err)
+	if results[0].Err != ErrInternalServerError {
+		t.Errorf("update result error %s want %s", results[0].Err, ErrInternalServerError)
 	}
 
 	if results[0].ID != "_design/foo" {
 		t.Fatalf("results ID %s want _design/foo", results[0].ID)
 	}
 
-	doc, err := designDB.Get(results[0].ID, nil)
-	if err != nil {
-		t.Fatal("db get error", err)
-	}
-
-	if doc["_rev"].(string) != results[0].Rev {
-		t.Errorf("doc rev %s not identical to result rev %s", doc["_rev"].(string), results[0].Rev)
+	_, err = defnDB.Get(results[0].ID, nil)
+	if err != ErrNotFound {
+		t.Fatalf("db get error %s want %s", err, ErrNotFound)
 	}
 }
 
 func TestSyncMany(t *testing.T) {
 	jsFunc := "function(doc) { emit(doc._id, doc._rev); }"
-	firstView := NewViewDefinition("design_doc", "view_one", jsFunc, "", "", nil, nil)
-	secondView := NewViewDefinition("design_doc_two", "view_one", jsFunc, "", "", nil, nil)
-	thirdView := NewViewDefinition("design_doc", "view_two", jsFunc, "", "", nil, nil)
-	results, err := SyncMany(designDB, []*ViewDefinition{firstView, secondView, thirdView}, false, nil)
+	firstView, _ := NewViewDefinition("design_doc", "view_one", jsFunc, "", "", nil, nil)
+	secondView, _ := NewViewDefinition("design_doc_two", "view_one", jsFunc, "", "", nil, nil)
+	thirdView, _ := NewViewDefinition("design_doc", "view_two", jsFunc, "", "", nil, nil)
+	results, err := SyncMany(defnDB, []*ViewDefinition{firstView, secondView, thirdView}, false, nil)
 	if err != nil {
 		t.Fatal("sync many error", err)
 	}
-	if len(results) != 2 {
-		t.Error("there should be only two design documents")
+	valid := 0
+	for _, res := range results {
+		if res.Err == nil {
+			valid++
+		}
+	}
+	if valid != 2 {
+		t.Errorf("returned %d results, there should be only 2 design documents", len(results))
 	}
 }

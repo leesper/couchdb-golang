@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -182,7 +184,11 @@ func (vr *ViewResults) fetch() ([]Row, error) {
 }
 
 // ViewDefinition is a definition of view stored in a specific design document.
-type ViewDefinition struct{}
+type ViewDefinition struct {
+	design, name, mapFun, reduceFun, language string
+	wrapper                                   func(Row) Row
+	options                                   map[string]interface{}
+}
 
 // NewViewDefinition returns a newly-created *ViewDefinition.
 // design: the name of the design document.
@@ -193,24 +199,46 @@ type ViewDefinition struct{}
 //
 // reduceFun: the reduce function code(optional).
 //
-// language: the name of the programming language used.
+// language: the name of the programming language used, default is javascript.
 //
 // wrapper: an optional function for processing the result rows after retrieved.
 //
 // options: view specific options.
-func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) *ViewDefinition {
-	return &ViewDefinition{}
+func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) (*ViewDefinition, error) {
+	if language == "" {
+		language = "javascript"
+	}
+
+	if mapFun == "" {
+		return nil, errors.New("map function empty")
+	}
+
+	return &ViewDefinition{
+		design:    design,
+		name:      name,
+		mapFun:    mapFun,
+		reduceFun: reduceFun,
+		language:  language,
+		wrapper:   wrapper,
+		options:   options,
+	}, nil
 }
 
 // GetDoc retrieves the design document corresponding to this view definition from
 // the given database.
 func (vd *ViewDefinition) GetDoc(db *Database) (map[string]interface{}, error) {
-	return nil, errors.New("not implemented")
+	if db == nil {
+		return nil, errors.New("database nil")
+	}
+	return db.Get(fmt.Sprintf("_design/%s", vd.design), nil)
 }
 
 // Sync ensures that the view stored in the database matches the view defined by this instance.
 func (vd *ViewDefinition) Sync(db *Database) ([]UpdateResult, error) {
-	return nil, errors.New("not implemented")
+	if db == nil {
+		return nil, errors.New("database nil")
+	}
+	return SyncMany(db, []*ViewDefinition{vd}, false, nil)
 }
 
 // SyncMany ensures that the views stored in the database match the views defined
@@ -221,10 +249,96 @@ func (vd *ViewDefinition) Sync(db *Database) ([]UpdateResult, error) {
 // viewDefns: a sequence of *ViewDefinition instances.
 //
 // removeMissing: whether to remove views found in a design document that are not
-// found in the list of ViewDefinition instances.
+// found in the list of ViewDefinition instances, default false.
 //
 // callback: a callback function invoked when a design document gets updated;
 // it is called before the doc has actually been saved back to the database.
 func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, callback func(map[string]interface{})) ([]UpdateResult, error) {
-	return nil, errors.New("not implemented")
+	if db == nil {
+		return nil, errors.New("database nil")
+	}
+
+	docs := []map[string]interface{}{}
+	designs := make([]string, len(viewDefns))
+	defMap := map[string][]*ViewDefinition{}
+	for idx, dfn := range viewDefns {
+		designs[idx] = dfn.design
+		if _, ok := defMap[dfn.design]; !ok {
+			defMap[dfn.design] = []*ViewDefinition{}
+		}
+		defMap[dfn.design] = append(defMap[dfn.design], dfn)
+	}
+	sort.Strings(designs)
+
+	for _, design := range designs {
+		docID := fmt.Sprintf("_design/%s", design)
+		doc, err := db.Get(docID, nil)
+		if err != nil {
+			doc = map[string]interface{}{"_id": docID}
+		}
+		origDoc := deepCopy(doc)
+		languages := map[string]bool{}
+
+		missing := map[string]bool{}
+		vs, ok := doc["views"]
+		if ok {
+			for k := range vs.(map[string]interface{}) {
+				missing[k] = true
+			}
+		}
+
+		for _, dfn := range defMap[design] {
+			funcs := map[string]interface{}{"map": dfn.mapFun}
+			if len(dfn.reduceFun) > 0 {
+				funcs["reduce"] = dfn.reduceFun
+			}
+			if dfn.options != nil {
+				funcs["options"] = dfn.options
+			}
+			if ok {
+				doc["views"].(map[string]interface{})[dfn.name] = funcs
+			} else {
+				doc["views"] = map[string]interface{}{dfn.name: funcs}
+			}
+			languages[dfn.language] = true
+			if missing[dfn.name] {
+				delete(missing, dfn.name)
+			}
+		}
+
+		if removeMissing {
+			for k := range missing {
+				delete(doc["views"].(map[string]interface{}), k)
+			}
+		} else if _, ok := doc["language"]; ok {
+			languages[doc["language"].(string)] = true
+		}
+
+		langs := []string{}
+		for lang := range languages {
+			langs = append(langs, lang)
+		}
+
+		if len(langs) > 1 {
+			return nil, fmt.Errorf("found different language views in one design document %v", langs)
+		}
+		doc["language"] = langs[0]
+
+		if !reflect.DeepEqual(doc, origDoc) {
+			if callback != nil {
+				callback(doc)
+			}
+			docs = append(docs, doc)
+		}
+	}
+
+	return db.Update(docs, nil)
+}
+
+func deepCopy(src map[string]interface{}) map[string]interface{} {
+	dst := map[string]interface{}{}
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
