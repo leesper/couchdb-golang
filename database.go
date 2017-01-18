@@ -210,8 +210,8 @@ func (d *Database) Contains(docid string) error {
 
 // UpdateResult represents result of an update.
 type UpdateResult struct {
-	id, rev string
-	err     error
+	ID, Rev string
+	Err     error
 }
 
 // Update performs a bulk update or creation of the given documents in a single HTTP request.
@@ -250,16 +250,16 @@ func (d *Database) Update(docs []map[string]interface{}, options map[string]inte
 				retErr = ErrInternalServerError
 			}
 			result = UpdateResult{
-				id:  v["id"].(string),
-				rev: "",
-				err: retErr,
+				ID:  v["id"].(string),
+				Rev: "",
+				Err: retErr,
 			}
 		} else {
 			id, rev := v["id"].(string), v["rev"].(string)
 			result = UpdateResult{
-				id:  id,
-				rev: rev,
-				err: retErr,
+				ID:  id,
+				Rev: rev,
+				Err: retErr,
 			}
 			doc := docs[i]
 			doc["_id"] = id

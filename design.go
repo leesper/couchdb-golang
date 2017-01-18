@@ -198,15 +198,20 @@ type ViewDefinition struct{}
 // wrapper: an optional function for processing the result rows after retrieved.
 //
 // options: view specific options.
-func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) {
+func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) *ViewDefinition {
+	return &ViewDefinition{}
 }
 
 // GetDoc retrieves the design document corresponding to this view definition from
 // the given database.
-func (vd *ViewDefinition) GetDoc(db *Database) {}
+func (vd *ViewDefinition) GetDoc(db *Database) (map[string]interface{}, error) {
+	return nil, errors.New("not implemented")
+}
 
 // Sync ensures that the view stored in the database matches the view defined by this instance.
-func (vd *ViewDefinition) Sync(db *Database) {}
+func (vd *ViewDefinition) Sync(db *Database) ([]UpdateResult, error) {
+	return nil, errors.New("not implemented")
+}
 
 // SyncMany ensures that the views stored in the database match the views defined
 // by the corresponding view definitions. This function might update more than
@@ -220,5 +225,6 @@ func (vd *ViewDefinition) Sync(db *Database) {}
 //
 // callback: a callback function invoked when a design document gets updated;
 // it is called before the doc has actually been saved back to the database.
-func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, callback func(map[string]interface{})) {
+func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, callback func(map[string]interface{})) ([]UpdateResult, error) {
+	return nil, errors.New("not implemented")
 }

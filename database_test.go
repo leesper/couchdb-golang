@@ -618,8 +618,8 @@ func TestBulkUpdateConflict(t *testing.T) {
 	if err != nil {
 		t.Error(`db update error`, err)
 	}
-	if results[0].err != ErrConflict {
-		t.Errorf("db update conflict err %v want ErrConflict", results[0].err)
+	if results[0].Err != ErrConflict {
+		t.Errorf("db update conflict err %v want ErrConflict", results[0].Err)
 	}
 }
 
