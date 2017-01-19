@@ -604,12 +604,146 @@ func TestSyncMany(t *testing.T) {
 	}
 }
 
-func TestShowUrls(t *testing.T)       {}
-func TestShowDocID(t *testing.T)      {}
-func TestShowParams(t *testing.T)     {}
-func TestList(t *testing.T)           {}
-func TestListKeys(t *testing.T)       {}
-func TestListViewParams(t *testing.T) {}
-func TestEmptyDoc(t *testing.T)       {}
-func TestNewDoc(t *testing.T)         {}
-func TestUpdateDoc(t *testing.T)      {}
+func TestShowUrls(t *testing.T) {
+	_, data, err := showListDB.Show("_design/foo/_show/bar", "", nil)
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "null:<default>" {
+		t.Errorf("db show returns %s want null:<default>", string(data))
+	}
+
+	_, data, err = showListDB.Show("foo/bar", "", nil)
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "null:<default>" {
+		t.Errorf("db show returns %s want null:<default>", string(data))
+	}
+}
+
+func TestShowDocID(t *testing.T) {
+	_, data, err := showListDB.Show("foo/bar", "", nil)
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "null:<default>" {
+		t.Errorf("db show returns %s want null:<default>", string(data))
+	}
+
+	_, data, err = showListDB.Show("foo/bar", "1", nil)
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "1:<default>" {
+		t.Errorf("db show returns %s want 1:<default>", string(data))
+	}
+
+	_, data, err = showListDB.Show("foo/bar", "2", nil)
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "2:<default>" {
+		t.Errorf("db show returns %s want 2:<default>", string(data))
+	}
+}
+
+func TestShowParams(t *testing.T) {
+	_, data, err := showListDB.Show("foo/bar", "", map[string]interface{}{"r": "abc"})
+	if err != nil {
+		t.Fatal("db show error", err)
+	}
+
+	if string(data) != "null:abc" {
+		t.Errorf("db show returns %s want null:abc", string(data))
+	}
+}
+
+func TestList(t *testing.T) {
+	_, data, err := showListDB.List("foo/list", "foo/by_id", nil)
+	if err != nil {
+		t.Fatal("db list error", err)
+	}
+
+	if string(data) != "1\r\n2\r\n" {
+		t.Errorf("db list returns %s want 1\r\n2\r\n", string(data))
+	}
+
+	_, data, err = showListDB.List("foo/list", "foo/by_id", map[string]interface{}{"include_header": true})
+	if err != nil {
+		t.Fatal("db list error", err)
+	}
+
+	if string(data) != "id\r\n1\r\n2\r\n" {
+		t.Errorf("db list returns %s want id\r\n1\r\n2\r\n", string(data))
+	}
+}
+
+func TestListKeys(t *testing.T) {
+	_, data, err := showListDB.List("foo/list", "foo/by_id", map[string]interface{}{"keys": []string{"1"}})
+	if err != nil {
+		t.Fatal("db list error", err)
+	}
+
+	if string(data) != "1\r\n" {
+		t.Errorf("db list returns %s want 1\r\n", string(data))
+	}
+}
+
+func TestListViewParams(t *testing.T) {
+	_, data, err := showListDB.List("foo/list", "foo/by_name", map[string]interface{}{"startkey": "o", "endkey": "p"})
+	if err != nil {
+		t.Fatal("db list error", err)
+	}
+
+	if string(data) != "1\r\n" {
+		t.Errorf("db list returns %s want 1\r\n", string(data))
+	}
+
+	_, data, err = showListDB.List("foo/list", "foo/by_name", map[string]interface{}{"descending": true})
+	if err != nil {
+		t.Fatal("db list error", err)
+	}
+
+	if string(data) != "2\r\n1\r\n" {
+		t.Errorf("db list returns %s want 2\r\n1\r\n", string(data))
+	}
+}
+
+func TestEmptyDoc(t *testing.T) {
+	_, data, err := updateDB.UpdateDoc("foo/bar", "", nil)
+	if err != nil {
+		t.Fatal("db updatedoc error", err)
+	}
+
+	if string(data) != "empty doc" {
+		t.Errorf("db list returns %s want empty doc", string(data))
+	}
+}
+
+func TestNewDoc(t *testing.T) {
+	_, data, err := updateDB.UpdateDoc("foo/bar", "new", nil)
+	if err != nil {
+		t.Fatal("db updatedoc error", err)
+	}
+
+	if string(data) != "new doc" {
+		t.Errorf("db list returns %s want new doc", string(data))
+	}
+}
+
+func TestUpdateDoc(t *testing.T) {
+	_, data, err := updateDB.UpdateDoc("foo/bar", "existed", nil)
+	if err != nil {
+		t.Fatal("db updatedoc error", err)
+	}
+
+	if string(data) != "hello doc" {
+		t.Errorf("db list returns %s want hello doc", string(data))
+	}
+}

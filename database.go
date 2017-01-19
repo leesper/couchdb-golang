@@ -1467,7 +1467,9 @@ func min(a, b int) int {
 // view: the name of the view in the format "designdoc/viewname"
 //
 // options: optional query parameters
-func (d *Database) List(name, view string, options map[string]interface{}) {}
+func (d *Database) List(name, view string, options map[string]interface{}) (http.Header, []byte, error) {
+	return nil, nil, errors.New("not implemented")
+}
 
 // Show calls a server-side 'show' function.
 //
@@ -1476,7 +1478,9 @@ func (d *Database) List(name, view string, options map[string]interface{}) {}
 // docID: optional document ID to pass to the show function
 //
 // options: optional query parameters
-func (d *Database) Show(name, docID string, options map[string]interface{}) {}
+func (d *Database) Show(name, docID string, options map[string]interface{}) (http.Header, []byte, error) {
+	return nil, nil, errors.New("not implemented")
+}
 
 // UpdateDoc calls server-side update handler.
 //
@@ -1485,4 +1489,6 @@ func (d *Database) Show(name, docID string, options map[string]interface{}) {}
 // docID: optional document ID to pass to the show function
 //
 // options: optional query parameters
-func (d *Database) UpdateDoc(name, docID string, options map[string]interface{}) {}
+func (d *Database) UpdateDoc(name, docID string, options map[string]interface{}) (http.Header, []byte, error) {
+	return nil, nil, errors.New("not implemented")
+}
