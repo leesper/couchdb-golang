@@ -216,8 +216,8 @@ func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper
 	return &ViewDefinition{
 		design:    design,
 		name:      name,
-		mapFun:    mapFun,
-		reduceFun: reduceFun,
+		mapFun:    strings.TrimLeft(mapFun, "\n"),
+		reduceFun: strings.TrimLeft(reduceFun, "\n"),
 		language:  language,
 		wrapper:   wrapper,
 		options:   options,

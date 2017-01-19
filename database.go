@@ -1459,3 +1459,30 @@ func (d *Database) IterView(name string, batch int, wrapper func(Row) Row, optio
 func min(a, b int) int {
 	return int(math.Min(float64(a), float64(b)))
 }
+
+// List formats a view using a server-side 'list' function.
+//
+// name: the name of the list function in the format "designdoc/listname"
+//
+// view: the name of the view in the format "designdoc/viewname"
+//
+// options: optional query parameters
+func (d *Database) List(name, view string, options map[string]interface{}) {}
+
+// Show calls a server-side 'show' function.
+//
+// name: the name of the show function in the format "designdoc/showname"
+//
+// docID: optional document ID to pass to the show function
+//
+// options: optional query parameters
+func (d *Database) Show(name, docID string, options map[string]interface{}) {}
+
+// UpdateDoc calls server-side update handler.
+//
+// name: the name of the update handler function in the format "designdoc/updatename".
+//
+// docID: optional document ID to pass to the show function
+//
+// options: optional query parameters
+func (d *Database) UpdateDoc(name, docID string, options map[string]interface{}) {}

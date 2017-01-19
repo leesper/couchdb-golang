@@ -603,3 +603,13 @@ func TestSyncMany(t *testing.T) {
 		t.Errorf("returned %d results, there should be only 2 design documents", len(results))
 	}
 }
+
+func TestShowUrls(t *testing.T)       {}
+func TestShowDocID(t *testing.T)      {}
+func TestShowParams(t *testing.T)     {}
+func TestList(t *testing.T)           {}
+func TestListKeys(t *testing.T)       {}
+func TestListViewParams(t *testing.T) {}
+func TestEmptyDoc(t *testing.T)       {}
+func TestNewDoc(t *testing.T)         {}
+func TestUpdateDoc(t *testing.T)      {}

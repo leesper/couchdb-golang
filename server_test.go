@@ -13,13 +13,15 @@ const (
 )
 
 var (
-	server   *Server
-	testsDB  *Database
-	movieDB  *Database
-	designDB *Database
-	iterDB   *Database
-	defnDB   *Database
-	movies   = []map[string]interface{}{
+	server     *Server
+	testsDB    *Database
+	movieDB    *Database
+	designDB   *Database
+	iterDB     *Database
+	defnDB     *Database
+	showListDB *Database
+	updateDB   *Database
+	movies     = []map[string]interface{}{
 		{
 			"_id":     "976059",
 			"title":   "Spacecataz",
@@ -316,14 +318,14 @@ func setup() {
 	designDB = setupDB("golang-design", designDB, 5)
 
 	iterDB = setupDB("golang-iter", iterDB, 6)
-	designDoc := map[string]interface{}{
+	iterDesignDoc := map[string]interface{}{
 		"_id": "_design/test",
 		"views": map[string]interface{}{
 			"nums":  map[string]string{"map": "function(doc) { emit(doc.num, null); }"},
 			"nulls": map[string]string{"map": "function(doc) { emit(null, null); }"},
 		},
 	}
-	_, _, err = iterDB.Save(designDoc, nil)
+	_, _, err = iterDB.Save(iterDesignDoc, nil)
 	if err != nil {
 		os.Exit(7)
 	}
@@ -339,6 +341,87 @@ func setup() {
 	}
 
 	defnDB = setupDB("golang-defn", defnDB, 9)
+
+	showListDB = setupDB("golang-showlist", showListDB, 10)
+	// setups for golang-showlist
+	showFunc := `
+	function(doc, req) {
+		return {"body": req.id + ":" + (req.query.r || "<default>")};
+	}`
+
+	listFunc := `
+	function(head, req) {
+		start({headers: {'Content-Type': 'text/csv'}});
+		if (req.query.include_header) {
+			send('id' + '\\r\\n');
+		}
+		var row;
+		while (row = getRow()) {
+			send(row.id + '\\r\\n');
+		}
+	}
+	`
+
+	showListDesignDoc := map[string]interface{}{
+		"_id":   "_design/foo",
+		"shows": map[string]interface{}{"bar": showFunc},
+		"views": map[string]interface{}{
+			"by_id":   map[string]string{"map": "function(doc) { emit(doc._id, null); }"},
+			"by_name": map[string]string{"map": "function(doc) { emit(doc.name, null); }"},
+		},
+		"lists": map[string]string{"list": listFunc},
+	}
+	showListDocs := []map[string]interface{}{
+		{"_id": "1", "name": "one"},
+		{"_id": "2", "name": "two"},
+	}
+	_, _, err = showListDB.Save(showListDesignDoc, nil)
+	if err != nil {
+		os.Exit(11)
+	}
+
+	_, err = showListDB.Update(showListDocs, nil)
+	if err != nil {
+		os.Exit(12)
+	}
+
+	updateDB = setupDB("golang-update", updateDB, 13)
+	// setups for golang-update
+	updateFunc := `
+	function(doc, req) {
+		if (!doc) {
+			if (req.id) {
+				return [{_id: req.id}, "new doc"];
+			}
+			return [null, "empty doc"];
+		}
+		doc.name = "hello";
+		return [doc, "hello doc"];
+	}
+	`
+	updateDesignDoc := map[string]interface{}{
+		"_id":      "_design/foo",
+		"language": "javascript",
+		"updates": map[string]string{
+			"bar": updateFunc,
+		},
+	}
+	_, _, err = updateDB.Save(updateDesignDoc, nil)
+	if err != nil {
+		os.Exit(14)
+	}
+
+	updateDocs := []map[string]interface{}{
+		{
+			"_id":  "existed",
+			"name": "bar",
+		},
+	}
+	_, err = updateDB.Update(updateDocs, nil)
+	if err != nil {
+		os.Exit(15)
+	}
+
 }
 
 func teardown() {
@@ -347,6 +430,8 @@ func teardown() {
 	server.Delete("golang-design")
 	server.Delete("golang-iter")
 	server.Delete("golang-defn")
+	server.Delete("golang-showlist")
+	server.Delete("golang-update")
 }
 
 func setupServer(url string, exitCode int) {
