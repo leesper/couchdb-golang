@@ -8,4 +8,11 @@
 //
 // Database contains all the functions to work with CouchDB database, such as
 // documents manipulating and querying.
+//
+// ViewResults represents the results produced by design document views. When calling
+// any of its functions like Offset(), TotalRows(), UpdateSeq() or Rows(), it will
+// perform a query on views on server side, and returns results as slice of Row
+//
+// ViewDefinition is a definition of view stored in a specific design document,
+// you can define your own map-reduce functions and Sync with the database.
 package couchdb
