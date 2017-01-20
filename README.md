@@ -1,4 +1,4 @@
-CouchDB-Golang Library v1.0
+CouchDB-Golang Library v1.1
 ===========================================
 
 A Golang library for working with CouchDB 2.x
