@@ -3,6 +3,7 @@ package couchdb
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -654,7 +655,7 @@ func TestShowDocID(t *testing.T) {
 }
 
 func TestShowParams(t *testing.T) {
-	_, data, err := showListDB.Show("foo/bar", "", map[string]interface{}{"r": "abc"})
+	_, data, err := showListDB.Show("foo/bar", "", url.Values{"r": []string{"abc"}})
 	if err != nil {
 		t.Fatal("db show error", err)
 	}
@@ -670,8 +671,8 @@ func TestList(t *testing.T) {
 		t.Fatal("db list error", err)
 	}
 
-	if string(data) != "1\r\n2\r\n" {
-		t.Errorf("db list returns %s want 1\r\n2\r\n", string(data))
+	if string(data) != `1\r\n2\r\n` {
+		t.Errorf("db list returns %s want `1\r\n2\r\n`", string(data))
 	}
 
 	_, data, err = showListDB.List("foo/list", "foo/by_id", map[string]interface{}{"include_header": true})
@@ -679,8 +680,8 @@ func TestList(t *testing.T) {
 		t.Fatal("db list error", err)
 	}
 
-	if string(data) != "id\r\n1\r\n2\r\n" {
-		t.Errorf("db list returns %s want id\r\n1\r\n2\r\n", string(data))
+	if string(data) != `id\r\n1\r\n2\r\n` {
+		t.Errorf("db list returns %s want `id\r\n1\r\n2\r\n`", string(data))
 	}
 }
 
@@ -690,8 +691,8 @@ func TestListKeys(t *testing.T) {
 		t.Fatal("db list error", err)
 	}
 
-	if string(data) != "1\r\n" {
-		t.Errorf("db list returns %s want 1\r\n", string(data))
+	if string(data) != `1\r\n` {
+		t.Errorf("db list returns %s want `1\r\n`", string(data))
 	}
 }
 
@@ -701,8 +702,8 @@ func TestListViewParams(t *testing.T) {
 		t.Fatal("db list error", err)
 	}
 
-	if string(data) != "1\r\n" {
-		t.Errorf("db list returns %s want 1\r\n", string(data))
+	if string(data) != `1\r\n` {
+		t.Errorf("db list returns %s want `1\r\n`", string(data))
 	}
 
 	_, data, err = showListDB.List("foo/list", "foo/by_name", map[string]interface{}{"descending": true})
@@ -710,8 +711,8 @@ func TestListViewParams(t *testing.T) {
 		t.Fatal("db list error", err)
 	}
 
-	if string(data) != "2\r\n1\r\n" {
-		t.Errorf("db list returns %s want 2\r\n1\r\n", string(data))
+	if string(data) != `2\r\n1\r\n` {
+		t.Errorf("db list returns %s want `2\r\n1\r\n`", string(data))
 	}
 }
 

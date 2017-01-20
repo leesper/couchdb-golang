@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"reflect"
 	"sort"
@@ -88,39 +89,57 @@ func (vr *ViewResults) Rows() ([]Row, error) {
 	return vr.rows, vr.err
 }
 
-func (vr *ViewResults) fetch() ([]Row, error) {
-	var data []byte
-	var err error
-	body := map[string]interface{}{}
+func viewLikeResourceRequest(res *Resource, opts map[string]interface{}) (http.Header, []byte, error) {
 	params := url.Values{}
-	for key, val := range vr.options {
+	body := map[string]interface{}{}
+	for key, val := range opts {
 		switch key {
-		case "keys": // json-array, put it in body and send POST request
+		case "keys": // json-array, put in body and send POST request
 			body[key] = val
-		case "key", "startkey", "start_key", "endkey", "end_key": // json
-			data, err = json.Marshal(val)
+		case "key", "startkey", "start_key", "endkey", "end_key":
+			data, err := json.Marshal(val)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			params.Add(key, string(data))
-		case "conflicts", "descending", "group", "include_docs", "attachments", "att_encoding_info", "inclusive_end", "reduce", "sorted", "update_seq": // boolean
+		case "conflicts", "descending", "group", "include_docs", "attachments", "att_encoding_info", "inclusive_end", "reduce", "sorted", "update_seq":
 			if val.(bool) {
 				params.Add(key, "true")
 			} else {
 				params.Add(key, "false")
 			}
-		case "endkey_docid", "end_key_doc_id", "stale", "startkey_docid", "start_key_doc_id": // string
+		case "endkey_docid", "end_key_doc_id", "stale", "startkey_docid", "start_key_doc_id", "format": // format for _list request
 			params.Add(key, val.(string))
-		case "group_level", "limit", "skip": // number
-			params.Add(key, fmt.Sprintf("%d", val.(int)))
+		case "group_level", "limit", "skip":
+			params.Add(key, fmt.Sprintf("%d", val))
+		default:
+			switch val := val.(type) {
+			case bool:
+				if val {
+					params.Add(key, "true")
+				} else {
+					params.Add(key, "false")
+				}
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+				params.Add(key, fmt.Sprintf("%d", val))
+			case float32, float64:
+				params.Add(key, fmt.Sprintf("%f", val))
+			default:
+				return nil, nil, fmt.Errorf("value %v not supported", val)
+			}
 		}
 	}
 
 	if len(body) > 0 {
-		_, data, err = vr.resource.PostJSON(vr.designDoc, nil, body, params)
-	} else {
-		_, data, err = vr.resource.GetJSON(vr.designDoc, nil, params)
+		return res.PostJSON("", nil, body, params)
 	}
+
+	return res.GetJSON("", nil, params)
+}
+
+func (vr *ViewResults) fetch() ([]Row, error) {
+	res := docResource(vr.resource, vr.designDoc)
+	_, data, err := viewLikeResourceRequest(res, vr.options)
 	if err != nil {
 		return nil, err
 	}

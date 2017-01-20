@@ -1460,6 +1460,21 @@ func min(a, b int) int {
 	return int(math.Min(float64(a), float64(b)))
 }
 
+// Show calls a server-side 'show' function.
+//
+// name: the name of the show function in the format "designdoc/showname"
+//
+// docID: optional document ID to pass to the show function
+//
+// params: optional query parameters
+func (d *Database) Show(name, docID string, params url.Values) (http.Header, []byte, error) {
+	designDocPath := designPath(name, "_show")
+	if docID != "" {
+		designDocPath = fmt.Sprintf("%s/%s", designDocPath, docID)
+	}
+	return d.resource.Get(designDocPath, nil, params)
+}
+
 // List formats a view using a server-side 'list' function.
 //
 // name: the name of the list function in the format "designdoc/listname"
@@ -1468,18 +1483,9 @@ func min(a, b int) int {
 //
 // options: optional query parameters
 func (d *Database) List(name, view string, options map[string]interface{}) (http.Header, []byte, error) {
-	return nil, nil, errors.New("not implemented")
-}
-
-// Show calls a server-side 'show' function.
-//
-// name: the name of the show function in the format "designdoc/showname"
-//
-// docID: optional document ID to pass to the show function
-//
-// options: optional query parameters
-func (d *Database) Show(name, docID string, options map[string]interface{}) (http.Header, []byte, error) {
-	return nil, nil, errors.New("not implemented")
+	designDocPath := designPath(name, "_list")
+	res := docResource(d.resource, fmt.Sprintf("%s/%s", designDocPath, strings.Split(view, "/")[1]))
+	return viewLikeResourceRequest(res, options)
 }
 
 // UpdateDoc calls server-side update handler.
@@ -1488,7 +1494,13 @@ func (d *Database) Show(name, docID string, options map[string]interface{}) (htt
 //
 // docID: optional document ID to pass to the show function
 //
-// options: optional query parameters
-func (d *Database) UpdateDoc(name, docID string, options map[string]interface{}) (http.Header, []byte, error) {
-	return nil, nil, errors.New("not implemented")
+// params: optional query parameters
+func (d *Database) UpdateDoc(name, docID string, params url.Values) (http.Header, []byte, error) {
+	designDocPath := designPath(name, "_update")
+	if docID == "" {
+		return d.resource.Post(designDocPath, nil, nil, params)
+	}
+
+	designDocPath = fmt.Sprintf("%s/%s", designDocPath, docID)
+	return d.resource.Put(designDocPath, nil, nil, params)
 }
