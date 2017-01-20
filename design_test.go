@@ -558,6 +558,8 @@ func TestViewDefinitionOptions(t *testing.T) {
 }
 
 func TestRetrieveViewDefinition(t *testing.T) {
+	version, _ := server.Version()
+
 	view, err := NewViewDefinition("foo", "bar", "baz", "", "", nil, nil)
 	if err != nil {
 		t.Fatal("create view definition error", err)
@@ -571,8 +573,14 @@ func TestRetrieveViewDefinition(t *testing.T) {
 		t.Fatal("no results returned")
 	}
 
-	if results[0].Err != ErrInternalServerError {
-		t.Errorf("update result error %s want %s", results[0].Err, ErrInternalServerError)
+	if strings.HasPrefix(version, "1") {
+		if results[0].Err != nil {
+			t.Error("update result error", results[0].Err)
+		}
+	} else if strings.HasPrefix(version, "2") {
+		if results[0].Err != ErrInternalServerError {
+			t.Errorf("update result error %v want %v", results[0].Err, ErrInternalServerError)
+		}
 	}
 
 	if results[0].ID != "_design/foo" {
@@ -580,9 +588,16 @@ func TestRetrieveViewDefinition(t *testing.T) {
 	}
 
 	_, err = defnDB.Get(results[0].ID, nil)
-	if err != ErrNotFound {
-		t.Fatalf("db get error %s want %s", err, ErrNotFound)
+	if strings.HasPrefix(version, "1") {
+		if err != nil {
+			t.Fatal("db get error", err)
+		}
+	} else if strings.HasPrefix(version, "2") {
+		if err != ErrNotFound {
+			t.Fatalf("db get error %s want %s", err, ErrNotFound)
+		}
 	}
+
 }
 
 func TestSyncMany(t *testing.T) {
