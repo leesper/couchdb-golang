@@ -12,6 +12,11 @@ const (
 	NumDocs = 100
 )
 
+type unitTestItem struct {
+	withIncludeDocs    ViewField
+	withoutIncludeDocs ViewField
+}
+
 var (
 	server     *Server
 	testsDB    *Database
@@ -21,6 +26,8 @@ var (
 	defnDB     *Database
 	showListDB *Database
 	updateDB   *Database
+	mappingDB  *Database
+	allMapFunc = `function(doc) { emit(doc._id, doc); }`
 	movies     = []map[string]interface{}{
 		{
 			"_id":     "976059",
@@ -422,6 +429,21 @@ func setup() {
 		os.Exit(15)
 	}
 
+	mappingDB = setupDB("golang-mapping", mappingDB, 16)
+	// setups for golang-mapping
+	// item := unitTestItem{
+	// 	withIncludeDocs:    ViewField{"test", allMapFunc},
+	// 	withoutIncludeDocs: ViewField{"test", allMapFunc, true},
+	// }
+	// _, err = SyncMany(mappingDB, []ViewDefinition{
+	// 	&ViewDefinition{
+	// 		item.withIncludeDocs.ToViewDefinition(),
+	// 		item.withoutIncludeDocs.ToViewDefinition(),
+	// 	},
+	// }, false, nil)
+	// if err != nil {
+	// 	os.Exit(17)
+	// }
 }
 
 func teardown() {
@@ -432,6 +454,7 @@ func teardown() {
 	server.Delete("golang-defn")
 	server.Delete("golang-showlist")
 	server.Delete("golang-update")
+	server.Delete("golang-mapping")
 }
 
 func setupServer(url string, exitCode int) {
