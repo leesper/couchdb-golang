@@ -12,11 +12,6 @@ const (
 	NumDocs = 100
 )
 
-type unitTestItem struct {
-	withIncludeDocs    ViewField
-	withoutIncludeDocs ViewField
-}
-
 var (
 	server     *Server
 	testsDB    *Database
@@ -27,7 +22,6 @@ var (
 	showListDB *Database
 	updateDB   *Database
 	mappingDB  *Database
-	allMapFunc = `function(doc) { emit(doc._id, doc); }`
 	movies     = []map[string]interface{}{
 		{
 			"_id":     "976059",
