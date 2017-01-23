@@ -119,15 +119,15 @@ func TestChangeIDFailure(t *testing.T) {
 	}
 }
 
-// type NotDocument struct{}
-//
-// func TestNotADocument(t *testing.T) {
-// 	notDocument := NotDocument{}
-// 	err := Store(mappingDB, &notDocument)
-// 	if err != ErrNotDocumentEmbedded {
-// 		t.Fatalf("store error %v want %v", err, ErrNotDocumentEmbedded)
-// 	}
-// }
+type NotDocument struct{}
+
+func TestNotADocument(t *testing.T) {
+	notDocument := NotDocument{}
+	err := Store(mappingDB, &notDocument)
+	if err != ErrNotDocumentEmbedded {
+		t.Fatalf("store error %v want %v", err, ErrNotDocumentEmbedded)
+	}
+}
 
 func TestNestedStruct(t *testing.T) {}
 
