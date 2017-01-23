@@ -3,7 +3,7 @@ package couchdb
 import "testing"
 
 type Post struct {
-	Title string
+	Title string `json:"title"`
 	Document
 }
 
@@ -13,7 +13,7 @@ func TestAutomaticID(t *testing.T) {
 		t.Error("post ID not empty", post.ID)
 	}
 
-	err := Store(mappingDB, post)
+	err := Store(mappingDB, &post)
 	if err != nil {
 		t.Fatal("document store error", err)
 	}
@@ -46,7 +46,7 @@ func TestExplicitIDByInit(t *testing.T) {
 		t.Fatalf("post ID %s want foo_bar", post.GetID())
 	}
 
-	err := Store(mappingDB, post)
+	err := Store(mappingDB, &post)
 	if err != nil {
 		t.Fatal("document store error", err)
 	}
@@ -71,13 +71,13 @@ func TestExplicitIDByInit(t *testing.T) {
 
 func TestExplicitIDBySetter(t *testing.T) {
 	post := Post{Title: "Foo bar"}
-	post.SetID("foo_bar")
+	post.SetID("foo_baz")
 
-	if post.GetID() != "foo_bar" {
+	if post.GetID() != "foo_baz" {
 		t.Errorf("post ID %s want foo_bar", post.GetID())
 	}
 
-	err := Store(mappingDB, post)
+	err := Store(mappingDB, &post)
 	if err != nil {
 		t.Fatal("document store error", err)
 	}
@@ -103,7 +103,7 @@ func TestExplicitIDBySetter(t *testing.T) {
 func TestChangeIDFailure(t *testing.T) {
 	post := Post{Title: "Foo bar"}
 
-	err := Store(mappingDB, post)
+	err := Store(mappingDB, &post)
 	if err != nil {
 		t.Fatal("document store error", err)
 	}
@@ -118,6 +118,20 @@ func TestChangeIDFailure(t *testing.T) {
 		t.Errorf("document set id error %v want %v", err, ErrSetID)
 	}
 }
+
+// type NotDocument struct{}
+//
+// func TestNotADocument(t *testing.T) {
+// 	notDocument := NotDocument{}
+// 	err := Store(mappingDB, &notDocument)
+// 	if err != ErrNotDocumentEmbedded {
+// 		t.Fatalf("store error %v want %v", err, ErrNotDocumentEmbedded)
+// 	}
+// }
+
+func TestNestedStruct(t *testing.T) {}
+
+////////////////////////////////////////////////////////////////////////////////
 
 // func TestBatchUpdate(t *testing.T) {
 // 	post1 := Post{Title: "Foo bar"}
