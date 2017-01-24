@@ -56,6 +56,8 @@ func (d *Document) GetRev() string {
 }
 
 // Store stores the document in specified database.
+// obj: a Document-embedded struct value, its id and rev will be updated after stored,
+// so caller must pass a pointer value.
 func Store(db *Database, obj interface{}) error {
 	ptrValue := reflect.ValueOf(obj)
 	if ptrValue.Kind() != reflect.Ptr || ptrValue.Elem().Kind() != reflect.Struct {

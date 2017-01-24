@@ -15,4 +15,20 @@
 //
 // ViewDefinition is a definition of view stored in a specific design document,
 // you can define your own map-reduce functions and Sync with the database.
+//
+// Document represents a document object in database. All struct that can be mapped
+// into CouchDB document must have it embedded. For example:
+//
+//  type User struct {
+//    Name string `json:"name"`
+//    Age int `json:"age"`
+//    Document
+//  }
+//  user := User{"Mike", 18}
+//  anotherUser := User{}
+//
+// Then you can call Store(db, &user) to store it into CouchDB or Load(db, user.GetID(), &anotherUser)
+// to get the data from database.
+//
+// ViewField represents a view definition value bound to Document.
 package couchdb

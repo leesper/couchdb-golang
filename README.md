@@ -11,6 +11,9 @@ supported Golang version:
 * Resource : a simple wrapper for HTTP requests and error handling
 * Server : CouchDB server instance
 * Database : CouchDB database instance
+* ViewResults : a representation of the results produced by design document views
+* ViewDefinition : a definition of view stored in a specific design document
+* Document : a representation of document object in database
 
 Inspired by [CouchDB-Python](https://github.com/djc/couchdb-python)
 
