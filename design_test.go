@@ -1,5 +1,7 @@
 package couchdb
 
+import "testing"
+
 // func TestRowObject(t *testing.T) {
 // 	results, err := designDB.View("_all_docs", nil, map[string]interface{}{"keys": []string{"blah"}})
 // 	if err != nil {
@@ -591,25 +593,26 @@ package couchdb
 //
 // }
 //
-// func TestSyncMany(t *testing.T) {
-// 	jsFunc := "function(doc) { emit(doc._id, doc._rev); }"
-// 	firstView, _ := NewViewDefinition("design_doc", "view_one", jsFunc, "", "", nil, nil)
-// 	secondView, _ := NewViewDefinition("design_doc_two", "view_one", jsFunc, "", "", nil, nil)
-// 	thirdView, _ := NewViewDefinition("design_doc", "view_two", jsFunc, "", "", nil, nil)
-// 	results, err := SyncMany(defnDB, []*ViewDefinition{firstView, secondView, thirdView}, false, nil)
-// 	if err != nil {
-// 		t.Fatal("sync many error", err)
-// 	}
-// 	valid := 0
-// 	for _, res := range results {
-// 		if res.Err == nil {
-// 			valid++
-// 		}
-// 	}
-// 	if valid != 2 {
-// 		t.Errorf("returned %d results, there should be only 2 design documents", len(results))
-// 	}
-// }
+func TestSyncMany(t *testing.T) {
+	jsFunc := "function(doc) { emit(doc._id, doc._rev); }"
+	firstView, _ := NewViewDefinition("design_doc", "view_one", jsFunc, "", "", nil, nil)
+	secondView, _ := NewViewDefinition("design_doc_two", "view_one", jsFunc, "", "", nil, nil)
+	thirdView, _ := NewViewDefinition("design_doc", "view_two", jsFunc, "", "", nil, nil)
+	results, err := SyncMany(defnDB, []*ViewDefinition{firstView, secondView, thirdView}, false, nil)
+	if err != nil {
+		t.Fatal("sync many error", err)
+	}
+	valid := 0
+	for _, res := range results {
+		if res.Err == nil {
+			valid++
+		}
+	}
+	if valid != 2 {
+		t.Errorf("returned %d results, there should be only 2 design documents", len(results))
+	}
+}
+
 //
 // func TestShowUrls(t *testing.T) {
 // 	_, data, err := showListDB.Show("_design/foo/_show/bar", "", nil)

@@ -2,141 +2,198 @@ package couchdb
 
 import "testing"
 
-type Post struct {
-	Title string `json:"title"`
-	Document
-}
-
-func TestAutomaticID(t *testing.T) {
-	post := Post{Title: "Foo bar"}
-	if post.GetID() != "" {
-		t.Error("post ID not empty", post.ID)
-	}
-
-	err := Store(mappingDB, &post)
-	if err != nil {
-		t.Fatal("document store error", err)
-	}
-
-	if post.GetID() == "" {
-		t.Error("post ID empty")
-	}
-
-	if post.GetRev() == "" {
-		t.Error("post rev empty")
-	}
-
-	doc, err := mappingDB.Get(post.GetID(), nil)
-	if err != nil {
-		t.Fatal("db get error", err)
-	}
-
-	if doc["title"].(string) != "Foo bar" {
-		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
-	}
-
-	if doc["_rev"].(string) != post.GetRev() {
-		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
-	}
-}
-
-func TestExplicitIDByInit(t *testing.T) {
-	post := Post{Document: DocumentWithID("foo_bar"), Title: "Foo bar"}
-	if post.GetID() != "foo_bar" {
-		t.Fatalf("post ID %s want foo_bar", post.GetID())
-	}
-
-	err := Store(mappingDB, &post)
-	if err != nil {
-		t.Fatal("document store error", err)
-	}
-
-	doc, err := mappingDB.Get(post.GetID(), nil)
-	if err != nil {
-		t.Fatal("db get error", err)
-	}
-
-	if doc["title"].(string) != "Foo bar" {
-		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
-	}
-
-	if doc["_id"].(string) != post.GetID() {
-		t.Errorf("post id %s want %s", post.GetID(), doc["_id"].(string))
-	}
-
-	if doc["_rev"].(string) != post.GetRev() {
-		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
-	}
-}
-
-func TestExplicitIDBySetter(t *testing.T) {
-	post := Post{Title: "Foo bar"}
-	post.SetID("foo_baz")
-
-	if post.GetID() != "foo_baz" {
-		t.Errorf("post ID %s want foo_bar", post.GetID())
-	}
-
-	err := Store(mappingDB, &post)
-	if err != nil {
-		t.Fatal("document store error", err)
-	}
-
-	doc, err := mappingDB.Get(post.GetID(), nil)
-	if err != nil {
-		t.Fatal("db get error", err)
-	}
-
-	if doc["title"].(string) != "Foo bar" {
-		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
-	}
-
-	if doc["_id"].(string) != post.GetID() {
-		t.Errorf("post id %s want %s", post.GetID(), doc["_id"].(string))
-	}
-
-	if doc["_rev"].(string) != post.GetRev() {
-		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
-	}
-}
-
-func TestChangeIDFailure(t *testing.T) {
-	post := Post{Title: "Foo bar"}
-
-	err := Store(mappingDB, &post)
-	if err != nil {
-		t.Fatal("document store error", err)
-	}
-
-	err = Load(mappingDB, post.GetID(), &post)
-	if err != nil {
-		t.Fatal("document load error", err)
-	}
-
-	err = post.SetID("foo_bar")
-	if err != ErrSetID {
-		t.Errorf("document set id error %v want %v", err, ErrSetID)
-	}
-}
-
-type NotDocument struct{}
-
-func TestNotADocument(t *testing.T) {
-	notDocument := NotDocument{}
-	err := Store(mappingDB, &notDocument)
-	if err != ErrNotDocumentEmbedded {
-		t.Fatalf("store error %v want %v", err, ErrNotDocumentEmbedded)
-	}
-}
-
-func TestNestedStruct(t *testing.T) {}
-
-////////////////////////////////////////////////////////////////////////////////
-
+// type Post struct {
+// 	Title string `json:"title"`
+// 	Document
+// }
+//
+// func TestAutomaticID(t *testing.T) {
+// 	post := Post{Title: "Foo bar"}
+// 	if post.GetID() != "" {
+// 		t.Error("post ID not empty", post.ID)
+// 	}
+//
+// 	err := Store(mappingDB, &post)
+// 	if err != nil {
+// 		t.Fatal("document store error", err)
+// 	}
+//
+// 	if post.GetID() == "" {
+// 		t.Error("post ID empty")
+// 	}
+//
+// 	if post.GetRev() == "" {
+// 		t.Error("post rev empty")
+// 	}
+//
+// 	doc, err := mappingDB.Get(post.GetID(), nil)
+// 	if err != nil {
+// 		t.Fatal("db get error", err)
+// 	}
+//
+// 	if doc["title"].(string) != "Foo bar" {
+// 		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
+// 	}
+//
+// 	if doc["_rev"].(string) != post.GetRev() {
+// 		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
+// 	}
+// }
+//
+// func TestExplicitIDByInit(t *testing.T) {
+// 	post := Post{Document: DocumentWithID("foo_bar"), Title: "Foo bar"}
+// 	if post.GetID() != "foo_bar" {
+// 		t.Fatalf("post ID %s want foo_bar", post.GetID())
+// 	}
+//
+// 	err := Store(mappingDB, &post)
+// 	if err != nil {
+// 		t.Fatal("document store error", err)
+// 	}
+//
+// 	doc, err := mappingDB.Get(post.GetID(), nil)
+// 	if err != nil {
+// 		t.Fatal("db get error", err)
+// 	}
+//
+// 	if doc["title"].(string) != "Foo bar" {
+// 		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
+// 	}
+//
+// 	if doc["_id"].(string) != post.GetID() {
+// 		t.Errorf("post id %s want %s", post.GetID(), doc["_id"].(string))
+// 	}
+//
+// 	if doc["_rev"].(string) != post.GetRev() {
+// 		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
+// 	}
+// }
+//
+// func TestExplicitIDBySetter(t *testing.T) {
+// 	post := Post{Title: "Foo bar"}
+// 	post.SetID("foo_baz")
+//
+// 	if post.GetID() != "foo_baz" {
+// 		t.Errorf("post ID %s want foo_bar", post.GetID())
+// 	}
+//
+// 	err := Store(mappingDB, &post)
+// 	if err != nil {
+// 		t.Fatal("document store error", err)
+// 	}
+//
+// 	doc, err := mappingDB.Get(post.GetID(), nil)
+// 	if err != nil {
+// 		t.Fatal("db get error", err)
+// 	}
+//
+// 	if doc["title"].(string) != "Foo bar" {
+// 		t.Errorf("doc title %s want Foo bar", doc["title"].(string))
+// 	}
+//
+// 	if doc["_id"].(string) != post.GetID() {
+// 		t.Errorf("post id %s want %s", post.GetID(), doc["_id"].(string))
+// 	}
+//
+// 	if doc["_rev"].(string) != post.GetRev() {
+// 		t.Errorf("post rev %s want %s", post.GetRev(), doc["_rev"].(string))
+// 	}
+// }
+//
+// func TestChangeIDFailure(t *testing.T) {
+// 	post := Post{Title: "Foo bar"}
+//
+// 	err := Store(mappingDB, &post)
+// 	if err != nil {
+// 		t.Fatal("document store error", err)
+// 	}
+//
+// 	err = Load(mappingDB, post.GetID(), &post)
+// 	if err != nil {
+// 		t.Fatal("document load error", err)
+// 	}
+//
+// 	err = post.SetID("foo_bar")
+// 	if err != ErrSetID {
+// 		t.Errorf("document set id error %v want %v", err, ErrSetID)
+// 	}
+// }
+//
+// type NotDocument struct{}
+//
+// func TestNotADocument(t *testing.T) {
+// 	notDocument := NotDocument{}
+// 	err := Store(mappingDB, &notDocument)
+// 	if err != ErrNotDocumentEmbedded {
+// 		t.Fatalf("store error %v want %v", err, ErrNotDocumentEmbedded)
+// 	}
+// }
+//
+// type User struct {
+// 	Name     string   `json:"name"`
+// 	Age      int      `json:"age"`
+// 	Marriage Marriage `json:"marriage"`
+// 	Document
+// }
+//
+// type Marriage struct {
+// 	Male    bool   `json:"male"`
+// 	Married string `json:"married"`
+// }
+//
+// func TestNestedStruct(t *testing.T) {
+// 	jack := User{
+// 		Name:     "Jack",
+// 		Age:      18,
+// 		Document: DocumentWithID("jack"),
+// 		Marriage: Marriage{Male: true, Married: "Lucy"},
+// 	}
+//
+// 	err := Store(mappingDB, &jack)
+// 	if err != nil {
+// 		t.Fatal("store error", err)
+// 	}
+//
+// 	doc, err := mappingDB.Get("jack", nil)
+// 	if err != nil {
+// 		t.Fatal("db get error", err)
+// 	}
+//
+// 	objDoc, err := ToJSONCompatibleMap(jack)
+// 	if err != nil {
+// 		t.Fatal("to json compatible error", err)
+// 	}
+//
+// 	if !reflect.DeepEqual(doc, objDoc) {
+// 		t.Error("doc and obj not equal")
+// 	}
+//
+// 	docObj := User{}
+// 	err = FromJSONCompatibleMap(&docObj, doc)
+// 	if err != nil {
+// 		t.Fatal("from json compatible error", err)
+// 	}
+//
+// 	if !reflect.DeepEqual(jack, docObj) {
+// 		t.Error("objs not equal")
+// 	}
+// }
+//
 // func TestBatchUpdate(t *testing.T) {
 // 	post1 := Post{Title: "Foo bar"}
 // 	post2 := Post{Title: "Foo baz"}
-// 	results, err := mappingDB.Update([]map[string]interface{}{ToMap(post1), ToMap(post2)}, nil)
+//
+// 	postMap1, err := ToJSONCompatibleMap(post1)
+// 	if err != nil {
+// 		t.Fatal("to json compatible error", err)
+// 	}
+//
+// 	postMap2, err := ToJSONCompatibleMap(post2)
+// 	if err != nil {
+// 		t.Fatal("to json compatible error", err)
+// 	}
+//
+// 	results, err := mappingDB.Update([]map[string]interface{}{postMap1, postMap2}, nil)
 // 	if err != nil {
 // 		t.Fatal("db update error", err)
 // 	}
@@ -154,12 +211,12 @@ func TestNestedStruct(t *testing.T) {}
 //
 // func TestStoreExisting(t *testing.T) {
 // 	post := Post{Title: "Foo bar"}
-// 	err := Store(mappingDB, post)
+// 	err := Store(mappingDB, &post)
 // 	if err != nil {
 // 		t.Fatal("document store error", err)
 // 	}
 //
-// 	err = Store(mappingDB, post)
+// 	err = Store(mappingDB, &post)
 // 	if err != nil {
 // 		t.Fatal("document store error", err)
 // 	}
@@ -174,14 +231,21 @@ func TestNestedStruct(t *testing.T) {}
 // 		t.Fatal("rows error", err)
 // 	}
 //
-// 	if len(rows) != 1 {
-// 		t.Errorf("len(rows) %d want 1", len(rows))
+// 	total := 0
+// 	for _, row := range rows {
+// 		if post.GetID() == row.ID {
+// 			total++
+// 		}
+// 	}
+//
+// 	if total != 1 {
+// 		t.Errorf("total %d want 1", total)
 // 	}
 // }
 //
 // type PostWithComment struct {
-// 	Title    string
-// 	Comments []map[string]string
+// 	Title    string              `json:"title"`
+// 	Comments []map[string]string `json:"comments"`
 // 	Document
 // }
 //
@@ -201,7 +265,7 @@ func TestNestedStruct(t *testing.T) {}
 // 		t.Fatal("document load error", err)
 // 	}
 // 	post2 := PostWithComment{}
-// 	err = FromMap(&post2, postDoc)
+// 	err = FromJSONCompatibleMap(&post2, postDoc)
 // 	if err != nil {
 // 		t.Fatal("from map error", err)
 // 	}
@@ -222,13 +286,13 @@ func TestNestedStruct(t *testing.T) {}
 // }
 //
 // func TestSliceFieldFloat(t *testing.T) {
-// 	err := mappingDB.Set("test", map[string]interface{}{"numbers": []float64{1.0, 2.0}})
+// 	err := mappingDB.Set("float", map[string]interface{}{"numbers": []float64{1.0, 2.0}})
 // 	if err != nil {
 // 		t.Fatal("db set error", err)
 // 	}
 //
 // 	thing := Thing{}
-// 	err = Load(mappingDB, "test", &thing)
+// 	err = Load(mappingDB, "float", &thing)
 // 	if err != nil {
 // 		t.Fatal("document load error", err)
 // 	}
@@ -237,66 +301,84 @@ func TestNestedStruct(t *testing.T) {}
 // 		t.Errorf("thing numbers[0] %v want 1.0", thing.Numbers[0])
 // 	}
 // }
-//
-// func TestAutomaticLowerCase(t *testing.T) {}
 
-type unitTestItem struct {
-	withIncludeDocs    ViewField
-	withoutIncludeDocs ViewField
-	Document
+////////////////////////////////////////////////////////////////////////////////
+
+func TestViewFieldProperty(t *testing.T) {
+	err := Store(mappingDB, &testItem)
+	if err != nil {
+		t.Fatal("document store error", err)
+	}
+
+	viewDef, err := testItem.withIncludeDocs()
+	if err != nil {
+		t.Fatal("view with include docs error", err)
+	}
+
+	results, err := viewDef.View(mappingDB, nil)
+	if err != nil {
+		t.Fatal("view definition error", err)
+	}
+
+	rows, err := results.Rows()
+	if err != nil {
+		t.Fatal("rows error", err)
+	}
+
+	val := rows[0].Val.(map[string]interface{})
+	id, rev := val["_id"].(string), val["_rev"].(string)
+	if id != testItem.GetID() {
+		t.Errorf("rows[0] ID %s want %s", id, testItem.GetID())
+	}
+
+	if rev != testItem.GetRev() {
+		t.Errorf("rows[0] Rev %s want %s", rev, testItem.GetRev())
+	}
 }
 
-var allMapFunc = `function(doc) { emit(doc._id, doc); }`
+func TestView(t *testing.T) {
+	err := Store(mappingDB, &testItem)
+	if err != nil {
+		t.Fatal("document store error", err)
+	}
 
-// func TestViewFieldProperty(t *testing.T) {
-// 	item := unitTestItem{}
-// 	err := Store(mappingDB, item)
-// 	if err != nil {
-// 		t.Fatal("document store error", err)
-// 	}
-// 	results, err := item.withIncludeDocs(mappingDB)
-// 	if err != nil {
-// 		t.Fatal("view with include docs error", err)
-// 	}
-// 	rows, err := results.Rows()
-// 	if err != nil {
-// 		t.Fatal("rows error", err)
-// 	}
-// 	fmt.Println(rows[0])
-// }
+	results, err := mappingDB.View("test/withoutIncludeDocs", nil, nil)
+	if err != nil {
+		t.Fatal("db view error", err)
+	}
 
-// func TestView(t *testing.T) {
-// 	item := unitTestItem{}
-// 	results, err := item.View(mappingDB, "test/without_include_docs")
-// 	if err != nil {
-// 		t.Fatal("view without include docs error", err)
-// 	}
-// 	rows, err := results.Rows()
-// 	if err != nil {
-// 		t.Fatal("rows error", err)
-// 	}
-// 	fmt.Println(rows[0])
-//
-// 	result, err = item.View(mappingDB, "test/with_include_docs")
-// 	if err != nil {
-// 		t.Fatal("view with include docs error", err)
-// 	}
-// 	rows, err := results.Rows()
-// 	if err != nil {
-// 		t.Fatal("rows error", err)
-// 	}
-// 	fmt.Println(rows[0])
-// }
+	rows, err := results.Rows()
+	if err != nil {
+		t.Fatal("rows error", err)
+	}
 
-// func TestWrappedView(t *testing.T) {
-// 	item := unitTestItem{}
-// 	results, err := mappingDB.View("_all_docs", item.wrapRow, nil)
-// 	doc = results.Rows()[0]
-// 	mappingDB.Delete(doc["_id"].(string))
-// }
+	val := rows[0].Val.(map[string]interface{})
+	id, rev := val["_id"].(string), val["_rev"].(string)
+	if id != testItem.GetID() {
+		t.Errorf("rows[0] ID %s want %s", id, testItem.GetID())
+	}
 
-// func TestQuery(t *testing.T) {
-// 	item := unitTestItem{}
-// 	results, err := item.Query(mappingDB, allMapFunc, nil)
-// 	results, err := item.Query(mappingDB, allMapFunc, true)
-// }
+	if rev != testItem.GetRev() {
+		t.Errorf("rows[0] Rev %s want %s", rev, testItem.GetRev())
+	}
+
+	results, err = mappingDB.View("test/withIncludeDocs", nil, nil)
+	if err != nil {
+		t.Fatal("db view error", err)
+	}
+
+	rows, err = results.Rows()
+	if err != nil {
+		t.Fatal("rows error", err)
+	}
+
+	val = rows[0].Val.(map[string]interface{})
+	id, rev = val["_id"].(string), val["_rev"].(string)
+	if id != testItem.GetID() {
+		t.Errorf("rows[0] ID %s want %s", id, testItem.GetID())
+	}
+
+	if rev != testItem.GetRev() {
+		t.Errorf("rows[0] Rev %s want %s", rev, testItem.GetRev())
+	}
+}

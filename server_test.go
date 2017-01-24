@@ -10,6 +10,12 @@ const (
 	NumDocs = 100
 )
 
+type unitTestItem struct {
+	withIncludeDocs    ViewField
+	withoutIncludeDocs ViewField
+	Document
+}
+
 var (
 	server     *Server
 	testsDB    *Database
@@ -20,7 +26,15 @@ var (
 	showListDB *Database
 	updateDB   *Database
 	mappingDB  *Database
-	movies     = []map[string]interface{}{
+
+	testItem = unitTestItem{
+		withIncludeDocs:    NewViewField("test", "withIncludeDocs", allMapFunc, "", "", nil, nil),
+		withoutIncludeDocs: NewViewField("test", "withoutIncludeDocs", allMapFunc, "", "", nil, nil),
+	}
+
+	allMapFunc = `function(doc) { emit(doc._id, doc); }`
+
+	movies = []map[string]interface{}{
 		{
 			"_id":     "976059",
 			"title":   "Spacecataz",
@@ -423,19 +437,20 @@ func setup() {
 
 	mappingDB = setupDB("golang-mapping", mappingDB, 16)
 	// setups for golang-mapping
-	// item := unitTestItem{
-	// 	withIncludeDocs:    ViewField{"test", allMapFunc},
-	// 	withoutIncludeDocs: ViewField{"test", allMapFunc, true},
-	// }
-	// _, err = SyncMany(mappingDB, []ViewDefinition{
-	// 	&ViewDefinition{
-	// 		item.withIncludeDocs.ToViewDefinition(),
-	// 		item.withoutIncludeDocs.ToViewDefinition(),
-	// 	},
-	// }, false, nil)
-	// if err != nil {
-	// 	os.Exit(17)
-	// }
+	viewDefs1, err := testItem.withIncludeDocs()
+	if err != nil {
+		os.Exit(17)
+	}
+
+	viewDefs2, err := testItem.withoutIncludeDocs()
+	if err != nil {
+		os.Exit(18)
+	}
+
+	_, err = SyncMany(mappingDB, []*ViewDefinition{viewDefs1, viewDefs2}, false, nil)
+	if err != nil {
+		os.Exit(19)
+	}
 }
 
 func teardown() {

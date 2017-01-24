@@ -243,6 +243,15 @@ func NewViewDefinition(design, name, mapFun, reduceFun, language string, wrapper
 	}, nil
 }
 
+// View executes the view definition in the given database.
+func (vd *ViewDefinition) View(db *Database, options map[string]interface{}) (*ViewResults, error) {
+	opts := deepCopy(options)
+	for k, v := range vd.options {
+		opts[k] = v
+	}
+	return db.View(fmt.Sprintf("%s/%s", vd.design, vd.name), nil, opts)
+}
+
 // GetDoc retrieves the design document corresponding to this view definition from
 // the given database.
 func (vd *ViewDefinition) GetDoc(db *Database) (map[string]interface{}, error) {
@@ -278,18 +287,24 @@ func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, cal
 	}
 
 	docs := []map[string]interface{}{}
-	designs := make([]string, len(viewDefns))
+	designs := map[string]bool{}
 	defMap := map[string][]*ViewDefinition{}
-	for idx, dfn := range viewDefns {
-		designs[idx] = dfn.design
+
+	for _, dfn := range viewDefns {
+		designs[dfn.design] = true
 		if _, ok := defMap[dfn.design]; !ok {
 			defMap[dfn.design] = []*ViewDefinition{}
 		}
 		defMap[dfn.design] = append(defMap[dfn.design], dfn)
 	}
-	sort.Strings(designs)
 
-	for _, design := range designs {
+	orders := []string{}
+	for k := range designs {
+		orders = append(orders, k)
+	}
+	sort.Strings(orders)
+
+	for _, design := range orders {
 		docID := fmt.Sprintf("_design/%s", design)
 		doc, err := db.Get(docID, nil)
 		if err != nil {
@@ -314,6 +329,7 @@ func SyncMany(db *Database, viewDefns []*ViewDefinition, removeMissing bool, cal
 			if dfn.options != nil {
 				funcs["options"] = dfn.options
 			}
+			_, ok = doc["views"]
 			if ok {
 				doc["views"].(map[string]interface{})[dfn.name] = funcs
 			} else {

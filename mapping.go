@@ -13,6 +13,7 @@ var (
 	ErrNotStruct = errors.New("value not of struct type")
 	// ErrNotDocumentEmbedded for not a document-embedded value
 	ErrNotDocumentEmbedded = errors.New("value not Document-embedded")
+	zero                   = reflect.Value{}
 )
 
 // Document represents a document object in database.
@@ -61,7 +62,6 @@ func Store(db *Database, obj interface{}) error {
 		return ErrNotStruct
 	}
 
-	zero := reflect.Value{}
 	if ptrValue.Elem().FieldByName("Document") == zero {
 		return ErrNotDocumentEmbedded
 	}
@@ -99,6 +99,7 @@ func Store(db *Database, obj interface{}) error {
 	}
 
 	setRevMethod.Call([]reflect.Value{reflect.ValueOf(rev)})
+	jsonRevField.SetString(rev)
 
 	return nil
 }
@@ -110,7 +111,6 @@ func Load(db *Database, docID string, obj interface{}) error {
 		return ErrNotStruct
 	}
 
-	zero := reflect.Value{}
 	if ptrValue.Elem().FieldByName("Document") == zero {
 		return ErrNotDocumentEmbedded
 	}
@@ -120,7 +120,36 @@ func Load(db *Database, docID string, obj interface{}) error {
 		return err
 	}
 
-	data, err := json.Marshal(doc)
+	err = FromJSONCompatibleMap(obj, doc)
+	if err != nil {
+		return err
+	}
+
+	if id, ok := doc["_id"]; ok {
+		setIDMethod := ptrValue.MethodByName("SetID")
+		setIDMethod.Call([]reflect.Value{reflect.ValueOf(id)})
+	}
+
+	if rev, ok := doc["_rev"]; ok {
+		setRevMethod := ptrValue.MethodByName("SetRev")
+		setRevMethod.Call([]reflect.Value{reflect.ValueOf(rev)})
+	}
+
+	return nil
+}
+
+// FromJSONCompatibleMap constructs a Document-embedded struct from a JSON-compatible map.
+func FromJSONCompatibleMap(obj interface{}, docMap map[string]interface{}) error {
+	ptrValue := reflect.ValueOf(obj)
+	if ptrValue.Kind() != reflect.Ptr || ptrValue.Elem().Kind() != reflect.Struct {
+		return ErrNotStruct
+	}
+
+	if ptrValue.Elem().FieldByName("Document") == zero {
+		return ErrNotDocumentEmbedded
+	}
+
+	data, err := json.Marshal(docMap)
 	if err != nil {
 		return err
 	}
@@ -130,20 +159,30 @@ func Load(db *Database, docID string, obj interface{}) error {
 		return err
 	}
 
+	if id, ok := docMap["_id"]; ok {
+		setIDMethod := ptrValue.MethodByName("SetID")
+		setIDMethod.Call([]reflect.Value{reflect.ValueOf(id)})
+	}
+
+	if rev, ok := docMap["_rev"]; ok {
+		setRevMethod := ptrValue.MethodByName("SetRev")
+		setRevMethod.Call([]reflect.Value{reflect.ValueOf(rev)})
+	}
+
 	return nil
 }
 
-// FromJSONCompatibleMap constructs a struct from a JSON-compatible map.
-func FromJSONCompatibleMap(obj interface{}, docMap map[string]interface{}) error {
-	return errors.New("not implemented")
-}
-
-// ToJSONCompatibleMap converts a struct into a JSON-compatible map, e.g. anything that cannot
-// be jsonified will be ignored silently.
+// ToJSONCompatibleMap converts a Document-embedded struct into a JSON-compatible map,
+// e.g. anything that cannot be jsonified will be ignored silently.
 func ToJSONCompatibleMap(obj interface{}) (map[string]interface{}, error) {
 	structValue := reflect.ValueOf(obj)
 	if structValue.Kind() != reflect.Struct {
 		return nil, ErrNotStruct
+	}
+
+	zero := reflect.Value{}
+	if structValue.FieldByName("Document") == zero {
+		return nil, ErrNotDocumentEmbedded
 	}
 
 	data, err := json.Marshal(obj)
@@ -161,4 +200,25 @@ func ToJSONCompatibleMap(obj interface{}) (map[string]interface{}, error) {
 }
 
 // ViewField represents a view definition value bound to Document.
-type ViewField struct{}
+type ViewField func() (*ViewDefinition, error)
+
+// NewViewField returns a ViewField function.
+// design: the name of the design document.
+//
+// name: the name of the view.
+//
+// mapFun: the map function code.
+//
+// reduceFun: the reduce function code(optional).
+//
+// language: the name of the programming language used, default is javascript.
+//
+// wrapper: an optional function for processing the result rows after retrieved.
+//
+// options: view specific options.
+func NewViewField(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) ViewField {
+	f := func() (*ViewDefinition, error) {
+		return NewViewDefinition(design, name, mapFun, reduceFun, language, wrapper, options)
+	}
+	return ViewField(f)
+}
