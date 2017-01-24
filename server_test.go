@@ -3,6 +3,8 @@ package couchdb
 import (
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,7 +30,7 @@ var (
 	mappingDB  *Database
 
 	testItem = unitTestItem{
-		withIncludeDocs:    NewViewField("test", "withIncludeDocs", allMapFunc, "", "", nil, nil),
+		withIncludeDocs:    NewViewField("test", "withIncludeDocs", allMapFunc, "", "", nil, map[string]interface{}{"include_docs": true}),
 		withoutIncludeDocs: NewViewField("test", "withoutIncludeDocs", allMapFunc, "", "", nil, nil),
 	}
 
@@ -461,7 +463,7 @@ func teardown() {
 	server.Delete("golang-defn")
 	server.Delete("golang-showlist")
 	server.Delete("golang-update")
-	server.Delete("golang-mapping")
+	// server.Delete("golang-mapping")
 }
 
 func setupServer(url string, exitCode int) {
@@ -497,364 +499,364 @@ func docFromRow(row Row) map[string]interface{} {
 	}
 }
 
-// func TestNewServer(t *testing.T) {
-// 	testServer, err := NewServer(DefaultBaseURL)
-// 	if err != nil {
-// 		t.Fatal(`new server error`, err)
-// 	}
-// 	_, err = testServer.Version()
-// 	if err != nil {
-// 		t.Error(`server version error`, err)
-// 	}
-// }
-//
-// func TestNewServerNoFullCommit(t *testing.T) {
-// 	testServer, err := NewServerNoFullCommit(DefaultBaseURL)
-// 	if err != nil {
-// 		t.Fatal(`new server full commit error`, err)
-// 	}
-// 	_, err = testServer.Version()
-// 	if err != nil {
-// 		t.Error(`server version error`, err)
-// 	}
-// }
-//
-// func TestServerExists(t *testing.T) {
-// 	testServer, err := NewServer("http://localhost:9999")
-// 	if err != nil {
-// 		t.Error(`new server error`, err)
-// 	}
-// 	_, err = testServer.Version()
-// 	if err == nil {
-// 		t.Error(`server version ok`)
-// 	}
-// }
-//
-// func TestServerConfig(t *testing.T) {
-// 	version, err := server.Version()
-// 	if err != nil {
-// 		t.Error("server version error", err)
-// 	}
-// 	// CouchDB 2.0 feature
-// 	if strings.HasPrefix(version, "2") {
-// 		config, err := server.Config("couchdb@localhost")
-// 		if err != nil {
-// 			t.Error(`server config error`, err)
-// 		}
-// 		if reflect.ValueOf(config).Kind() != reflect.Map {
-// 			t.Error(`config not of type map`)
-// 		}
-// 	}
-// }
-//
-// func TestServerString(t *testing.T) {
-// 	testServer, err := NewServer(DefaultBaseURL)
-// 	if err != nil {
-// 		t.Error(`new server error`, err)
-// 	}
-// 	if testServer.String() != "Server http://localhost:5984" {
-// 		t.Error(`server name invalid want "Server http://localhost:5984"`)
-// 	}
-// }
-//
-// func TestServerVars(t *testing.T) {
-// 	version, err := server.Version()
-// 	if err != nil {
-// 		t.Error(`server version error`, err)
-// 	}
-// 	if reflect.ValueOf(version).Kind() != reflect.String {
-// 		t.Error(`version not of string type`)
-// 	}
-//
-// 	tasks, _ := server.ActiveTasks()
-// 	if reflect.ValueOf(tasks).Kind() != reflect.Slice {
-// 		t.Error(`tasks not of slice type`)
-// 	}
-// }
-//
-// func TestServerStats(t *testing.T) {
-// 	version, err := server.Version()
-// 	if err != nil {
-// 		t.Error("server version error", err)
-// 	}
-// 	// CouchDB 2.0 feature
-// 	if strings.HasPrefix(version, "2") {
-// 		stats, err := server.Stats("couchdb@localhost", "")
-// 		if err != nil {
-// 			t.Error(`server stats error`, err)
-// 		}
-// 		if reflect.ValueOf(stats).Kind() != reflect.Map {
-// 			t.Error(`stats not of map type`)
-// 		}
-// 		stats, err = server.Stats("couchdb@localhost", "couchdb")
-// 		if err != nil {
-// 			t.Error(`server stats httpd/requests error`, err)
-// 		}
-// 		if reflect.ValueOf(stats).Kind() != reflect.Map {
-// 			t.Error(`httpd/requests stats not of map type`)
-// 		}
-// 	}
-// }
-//
-// func TestDBs(t *testing.T) {
-// 	aName, bName := "dba", "dbb"
-// 	server.Create(aName)
-// 	defer server.Delete(aName)
-//
-// 	server.Create(bName)
-// 	defer server.Delete(bName)
-//
-// 	dbs, err := server.DBs()
-// 	if err != nil {
-// 		t.Error(`server DBs error`, err)
-// 	}
-// 	var aExist, bExist bool
-// 	for _, v := range dbs {
-// 		if v == aName {
-// 			aExist = true
-// 		} else if v == bName {
-// 			bExist = true
-// 		}
-// 	}
-//
-// 	if !aExist {
-// 		t.Errorf("db %s not existed in dbs", aName)
-// 	}
-//
-// 	if !bExist {
-// 		t.Errorf("db %s not existed in dbs", bName)
-// 	}
-// }
-//
-// func TestLen(t *testing.T) {
-// 	aName, bName := "dba", "dbb"
-// 	server.Create(aName)
-// 	defer server.Delete(aName)
-// 	server.Create(bName)
-// 	defer server.Delete(bName)
-//
-// 	len, err := server.Len()
-// 	if err != nil {
-// 		t.Error(`server len error`, err)
-// 	}
-// 	if len < 2 {
-// 		t.Error("server len should be >= 2")
-// 	}
-// }
-//
-// func TestGetDBMissing(t *testing.T) {
-// 	_, err := server.Get("golang-missing")
-// 	if err != ErrNotFound {
-// 		t.Errorf("err = %v want ErrNotFound", err)
-// 	}
-// }
-//
-// func TestGetDB(t *testing.T) {
-// 	_, err := server.Get("golang-tests")
-// 	if err != nil {
-// 		t.Error(`get db error`, err)
-// 	}
-// }
-//
-// func TestCreateDBConflict(t *testing.T) {
-// 	conflictDBName := "golang-conflict"
-// 	_, err := server.Create(conflictDBName)
-// 	if err != nil {
-// 		t.Error(`server create error`, err)
-// 	}
-// 	// defer s.Delete(conflictDBName)
-// 	if !server.Contains(conflictDBName) {
-// 		t.Error(`server not contains`, conflictDBName)
-// 	}
-// 	if _, err = server.Create(conflictDBName); err != ErrPreconditionFailed {
-// 		t.Errorf("err = %v want ErrPreconditionFailed", err)
-// 	}
-// 	server.Delete(conflictDBName)
-// }
-//
-// func TestCreateDB(t *testing.T) {
-// 	_, err := server.Create("golang-create")
-// 	if err != nil {
-// 		t.Error(`get db failed`)
-// 	}
-// 	server.Delete("golang-create")
-// }
-//
-// func TestCreateDBIllegal(t *testing.T) {
-// 	if _, err := server.Create("_db"); err == nil {
-// 		t.Error(`create illegal _db ok`)
-// 	}
-// }
-//
-// func TestDeleteDB(t *testing.T) {
-// 	dbName := "golang-delete"
-// 	server.Create(dbName)
-// 	if !server.Contains(dbName) {
-// 		t.Error(`server not contains`, dbName)
-// 	}
-// 	server.Delete(dbName)
-// 	if server.Contains(dbName) {
-// 		t.Error(`server contains`, dbName)
-// 	}
-// }
-//
-// func TestDeleteDBMissing(t *testing.T) {
-// 	dbName := "golang-missing"
-// 	err := server.Delete(dbName)
-// 	if err != ErrNotFound {
-// 		t.Errorf("err = %v want ErrNotFound", err)
-// 	}
-// }
-//
-// func TestReplicate(t *testing.T) {
-// 	aName := "dba"
-// 	dba, _ := server.Create(aName)
-// 	defer server.Delete(aName)
-//
-// 	bName := "dbb"
-// 	dbb, _ := server.Create(bName)
-// 	defer server.Delete(bName)
-//
-// 	id, _, err := dba.Save(map[string]interface{}{"test": "a"}, nil)
-// 	if err != nil {
-// 		t.Error(`dba save error`, err)
-// 	}
-// 	result, _ := server.Replicate(aName, bName, nil)
-// 	if v, ok := result["ok"]; !(ok && v.(bool)) {
-// 		t.Error(`result should be ok`)
-// 	}
-// 	doc, err := dbb.Get(id, nil)
-// 	if err != nil {
-// 		t.Errorf("db %s get doc %s error %v", bName, id, err)
-// 	}
-// 	if v, ok := doc["test"]; ok {
-// 		if "a" != v.(string) {
-// 			t.Error(`doc[test] should be a, found`, v.(string))
-// 		}
-// 	}
-//
-// 	doc["test"] = "b"
-// 	dbb.Update([]map[string]interface{}{doc}, nil)
-// 	result, err = server.Replicate(bName, aName, nil)
-// 	if err != nil {
-// 		t.Error(`server replicate error`, err)
-// 	}
-// 	if reflect.ValueOf(result).Kind() != reflect.Map {
-// 		t.Error(`server replicate return non-map result`)
-// 	}
-//
-// 	docA, err := dba.Get(id, nil)
-// 	if err != nil {
-// 		t.Errorf("db %s get doc %s error %v", aName, id, err)
-// 	}
-// 	if v, ok := docA["test"]; ok {
-// 		if "b" != v.(string) {
-// 			t.Error(`docA[test] should be b, found`, v.(string))
-// 		}
-// 	}
-//
-// 	docB, err := dbb.Get(id, nil)
-// 	if err != nil {
-// 		t.Errorf("db %s get doc %s error %v", bName, id, err)
-// 	}
-// 	if v, ok := docB["test"]; ok {
-// 		if "b" != v.(string) {
-// 			t.Error(`docB[test] should be b, found`, v.(string))
-// 		}
-// 	}
-// }
-//
-// func TestReplicateContinuous(t *testing.T) {
-// 	aName, bName := "dba", "dbb"
-// 	server.Create(aName)
-// 	defer server.Delete(aName)
-//
-// 	server.Create(bName)
-// 	defer server.Delete(bName)
-//
-// 	result, err := server.Replicate(aName, bName, map[string]interface{}{"continuous": true})
-// 	if err != nil {
-// 		t.Error(`server replicate error`, err)
-// 	}
-//
-// 	if reflect.ValueOf(result).Kind() != reflect.Map {
-// 		t.Error(`server replicate return non-map result`)
-// 	}
-//
-// 	if v, ok := result["ok"]; !(ok && v.(bool)) {
-// 		t.Error(`result should be ok`)
-// 	}
-// }
-//
-// func TestMembership(t *testing.T) {
-// 	version, err := server.Version()
-// 	if err != nil {
-// 		t.Error("server version error", err)
-// 	}
-// 	// CouchDB 2.0 feature
-// 	if strings.HasPrefix(version, "2") {
-// 		allNodes, clusterNodes, err := server.Membership()
-// 		if err != nil {
-// 			t.Error(`server membership error`, err)
-// 		}
-//
-// 		kind := reflect.ValueOf(allNodes).Kind()
-// 		elemKind := reflect.TypeOf(allNodes).Elem().Kind()
-//
-// 		if kind != reflect.Slice || elemKind != reflect.String {
-// 			t.Error(`clusterNodes should be slice of string`)
-// 		}
-//
-// 		kind = reflect.ValueOf(clusterNodes).Kind()
-// 		elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
-//
-// 		if kind != reflect.Slice || elemKind != reflect.String {
-// 			t.Error(`allNodes should be slice of string`)
-// 		}
-// 	}
-// }
-//
-// func TestUUIDs(t *testing.T) {
-// 	uuids, err := server.UUIDs(10)
-// 	if err != nil {
-// 		t.Error(`server uuids error`, err)
-// 	}
-// 	if reflect.ValueOf(uuids).Kind() != reflect.Slice {
-// 		t.Error(`server uuids should be of type slice`)
-// 	}
-// 	if len(uuids) != 10 {
-// 		t.Error(`server uuids should be of length 10, not`, len(uuids))
-// 	}
-// }
-//
-// func TestBasicAuth(t *testing.T) {
-// 	testServer, _ := NewServer("http://root:password@localhost:5984/")
-// 	_, err := testServer.Create("golang-auth")
-// 	if err != ErrUnauthorized {
-// 		t.Errorf("err = %v want ErrUnauthorized", err)
-// 	}
-// }
-//
-// func TestUserManagement(t *testing.T) {
-// 	user := "foo"
-// 	password := "secret"
-// 	roles := []string{"hero"}
-// 	server.AddUser(user, password, roles)
-//
-// 	token, err := server.Login(user, password)
-// 	if err != nil {
-// 		t.Errorf("server add user %s password %s roles %v error %s", user, password, roles, err)
-// 	}
-//
-// 	if err = server.VerifyToken(token); err != nil {
-// 		t.Error("server verify token error", err)
-// 	}
-//
-// 	if err = server.Logout(token); err != nil {
-// 		t.Error("server logout error", err)
-// 	}
-//
-// 	if err = server.RemoveUser("foo"); err != nil {
-// 		t.Error("server remove user error", err)
-// 	}
-// }
+func TestNewServer(t *testing.T) {
+	testServer, err := NewServer(DefaultBaseURL)
+	if err != nil {
+		t.Fatal(`new server error`, err)
+	}
+	_, err = testServer.Version()
+	if err != nil {
+		t.Error(`server version error`, err)
+	}
+}
+
+func TestNewServerNoFullCommit(t *testing.T) {
+	testServer, err := NewServerNoFullCommit(DefaultBaseURL)
+	if err != nil {
+		t.Fatal(`new server full commit error`, err)
+	}
+	_, err = testServer.Version()
+	if err != nil {
+		t.Error(`server version error`, err)
+	}
+}
+
+func TestServerExists(t *testing.T) {
+	testServer, err := NewServer("http://localhost:9999")
+	if err != nil {
+		t.Error(`new server error`, err)
+	}
+	_, err = testServer.Version()
+	if err == nil {
+		t.Error(`server version ok`)
+	}
+}
+
+func TestServerConfig(t *testing.T) {
+	version, err := server.Version()
+	if err != nil {
+		t.Error("server version error", err)
+	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		config, err := server.Config("couchdb@localhost")
+		if err != nil {
+			t.Error(`server config error`, err)
+		}
+		if reflect.ValueOf(config).Kind() != reflect.Map {
+			t.Error(`config not of type map`)
+		}
+	}
+}
+
+func TestServerString(t *testing.T) {
+	testServer, err := NewServer(DefaultBaseURL)
+	if err != nil {
+		t.Error(`new server error`, err)
+	}
+	if testServer.String() != "Server http://localhost:5984" {
+		t.Error(`server name invalid want "Server http://localhost:5984"`)
+	}
+}
+
+func TestServerVars(t *testing.T) {
+	version, err := server.Version()
+	if err != nil {
+		t.Error(`server version error`, err)
+	}
+	if reflect.ValueOf(version).Kind() != reflect.String {
+		t.Error(`version not of string type`)
+	}
+
+	tasks, _ := server.ActiveTasks()
+	if reflect.ValueOf(tasks).Kind() != reflect.Slice {
+		t.Error(`tasks not of slice type`)
+	}
+}
+
+func TestServerStats(t *testing.T) {
+	version, err := server.Version()
+	if err != nil {
+		t.Error("server version error", err)
+	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		stats, err := server.Stats("couchdb@localhost", "")
+		if err != nil {
+			t.Error(`server stats error`, err)
+		}
+		if reflect.ValueOf(stats).Kind() != reflect.Map {
+			t.Error(`stats not of map type`)
+		}
+		stats, err = server.Stats("couchdb@localhost", "couchdb")
+		if err != nil {
+			t.Error(`server stats httpd/requests error`, err)
+		}
+		if reflect.ValueOf(stats).Kind() != reflect.Map {
+			t.Error(`httpd/requests stats not of map type`)
+		}
+	}
+}
+
+func TestDBs(t *testing.T) {
+	aName, bName := "dba", "dbb"
+	server.Create(aName)
+	defer server.Delete(aName)
+
+	server.Create(bName)
+	defer server.Delete(bName)
+
+	dbs, err := server.DBs()
+	if err != nil {
+		t.Error(`server DBs error`, err)
+	}
+	var aExist, bExist bool
+	for _, v := range dbs {
+		if v == aName {
+			aExist = true
+		} else if v == bName {
+			bExist = true
+		}
+	}
+
+	if !aExist {
+		t.Errorf("db %s not existed in dbs", aName)
+	}
+
+	if !bExist {
+		t.Errorf("db %s not existed in dbs", bName)
+	}
+}
+
+func TestLen(t *testing.T) {
+	aName, bName := "dba", "dbb"
+	server.Create(aName)
+	defer server.Delete(aName)
+	server.Create(bName)
+	defer server.Delete(bName)
+
+	len, err := server.Len()
+	if err != nil {
+		t.Error(`server len error`, err)
+	}
+	if len < 2 {
+		t.Error("server len should be >= 2")
+	}
+}
+
+func TestGetDBMissing(t *testing.T) {
+	_, err := server.Get("golang-missing")
+	if err != ErrNotFound {
+		t.Errorf("err = %v want ErrNotFound", err)
+	}
+}
+
+func TestGetDB(t *testing.T) {
+	_, err := server.Get("golang-tests")
+	if err != nil {
+		t.Error(`get db error`, err)
+	}
+}
+
+func TestCreateDBConflict(t *testing.T) {
+	conflictDBName := "golang-conflict"
+	_, err := server.Create(conflictDBName)
+	if err != nil {
+		t.Error(`server create error`, err)
+	}
+	// defer s.Delete(conflictDBName)
+	if !server.Contains(conflictDBName) {
+		t.Error(`server not contains`, conflictDBName)
+	}
+	if _, err = server.Create(conflictDBName); err != ErrPreconditionFailed {
+		t.Errorf("err = %v want ErrPreconditionFailed", err)
+	}
+	server.Delete(conflictDBName)
+}
+
+func TestCreateDB(t *testing.T) {
+	_, err := server.Create("golang-create")
+	if err != nil {
+		t.Error(`get db failed`)
+	}
+	server.Delete("golang-create")
+}
+
+func TestCreateDBIllegal(t *testing.T) {
+	if _, err := server.Create("_db"); err == nil {
+		t.Error(`create illegal _db ok`)
+	}
+}
+
+func TestDeleteDB(t *testing.T) {
+	dbName := "golang-delete"
+	server.Create(dbName)
+	if !server.Contains(dbName) {
+		t.Error(`server not contains`, dbName)
+	}
+	server.Delete(dbName)
+	if server.Contains(dbName) {
+		t.Error(`server contains`, dbName)
+	}
+}
+
+func TestDeleteDBMissing(t *testing.T) {
+	dbName := "golang-missing"
+	err := server.Delete(dbName)
+	if err != ErrNotFound {
+		t.Errorf("err = %v want ErrNotFound", err)
+	}
+}
+
+func TestReplicate(t *testing.T) {
+	aName := "dba"
+	dba, _ := server.Create(aName)
+	defer server.Delete(aName)
+
+	bName := "dbb"
+	dbb, _ := server.Create(bName)
+	defer server.Delete(bName)
+
+	id, _, err := dba.Save(map[string]interface{}{"test": "a"}, nil)
+	if err != nil {
+		t.Error(`dba save error`, err)
+	}
+	result, _ := server.Replicate(aName, bName, nil)
+	if v, ok := result["ok"]; !(ok && v.(bool)) {
+		t.Error(`result should be ok`)
+	}
+	doc, err := dbb.Get(id, nil)
+	if err != nil {
+		t.Errorf("db %s get doc %s error %v", bName, id, err)
+	}
+	if v, ok := doc["test"]; ok {
+		if "a" != v.(string) {
+			t.Error(`doc[test] should be a, found`, v.(string))
+		}
+	}
+
+	doc["test"] = "b"
+	dbb.Update([]map[string]interface{}{doc}, nil)
+	result, err = server.Replicate(bName, aName, nil)
+	if err != nil {
+		t.Error(`server replicate error`, err)
+	}
+	if reflect.ValueOf(result).Kind() != reflect.Map {
+		t.Error(`server replicate return non-map result`)
+	}
+
+	docA, err := dba.Get(id, nil)
+	if err != nil {
+		t.Errorf("db %s get doc %s error %v", aName, id, err)
+	}
+	if v, ok := docA["test"]; ok {
+		if "b" != v.(string) {
+			t.Error(`docA[test] should be b, found`, v.(string))
+		}
+	}
+
+	docB, err := dbb.Get(id, nil)
+	if err != nil {
+		t.Errorf("db %s get doc %s error %v", bName, id, err)
+	}
+	if v, ok := docB["test"]; ok {
+		if "b" != v.(string) {
+			t.Error(`docB[test] should be b, found`, v.(string))
+		}
+	}
+}
+
+func TestReplicateContinuous(t *testing.T) {
+	aName, bName := "dba", "dbb"
+	server.Create(aName)
+	defer server.Delete(aName)
+
+	server.Create(bName)
+	defer server.Delete(bName)
+
+	result, err := server.Replicate(aName, bName, map[string]interface{}{"continuous": true})
+	if err != nil {
+		t.Error(`server replicate error`, err)
+	}
+
+	if reflect.ValueOf(result).Kind() != reflect.Map {
+		t.Error(`server replicate return non-map result`)
+	}
+
+	if v, ok := result["ok"]; !(ok && v.(bool)) {
+		t.Error(`result should be ok`)
+	}
+}
+
+func TestMembership(t *testing.T) {
+	version, err := server.Version()
+	if err != nil {
+		t.Error("server version error", err)
+	}
+	// CouchDB 2.0 feature
+	if strings.HasPrefix(version, "2") {
+		allNodes, clusterNodes, err := server.Membership()
+		if err != nil {
+			t.Error(`server membership error`, err)
+		}
+
+		kind := reflect.ValueOf(allNodes).Kind()
+		elemKind := reflect.TypeOf(allNodes).Elem().Kind()
+
+		if kind != reflect.Slice || elemKind != reflect.String {
+			t.Error(`clusterNodes should be slice of string`)
+		}
+
+		kind = reflect.ValueOf(clusterNodes).Kind()
+		elemKind = reflect.TypeOf(clusterNodes).Elem().Kind()
+
+		if kind != reflect.Slice || elemKind != reflect.String {
+			t.Error(`allNodes should be slice of string`)
+		}
+	}
+}
+
+func TestUUIDs(t *testing.T) {
+	uuids, err := server.UUIDs(10)
+	if err != nil {
+		t.Error(`server uuids error`, err)
+	}
+	if reflect.ValueOf(uuids).Kind() != reflect.Slice {
+		t.Error(`server uuids should be of type slice`)
+	}
+	if len(uuids) != 10 {
+		t.Error(`server uuids should be of length 10, not`, len(uuids))
+	}
+}
+
+func TestBasicAuth(t *testing.T) {
+	testServer, _ := NewServer("http://root:password@localhost:5984/")
+	_, err := testServer.Create("golang-auth")
+	if err != ErrUnauthorized {
+		t.Errorf("err = %v want ErrUnauthorized", err)
+	}
+}
+
+func TestUserManagement(t *testing.T) {
+	user := "foo"
+	password := "secret"
+	roles := []string{"hero"}
+	server.AddUser(user, password, roles)
+
+	token, err := server.Login(user, password)
+	if err != nil {
+		t.Errorf("server add user %s password %s roles %v error %s", user, password, roles, err)
+	}
+
+	if err = server.VerifyToken(token); err != nil {
+		t.Error("server verify token error", err)
+	}
+
+	if err = server.Logout(token); err != nil {
+		t.Error("server logout error", err)
+	}
+
+	if err = server.RemoveUser("foo"); err != nil {
+		t.Error("server remove user error", err)
+	}
+}
