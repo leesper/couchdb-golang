@@ -1,4 +1,4 @@
-CouchDB-Golang Library v1.1
+CouchDB-Golang Library v1.2
 ===========================================
 
 A Golang library for working with CouchDB 2.x
@@ -31,6 +31,22 @@ const (
 ## Variables
 ```go
 var (
+    // ErrBatchValue for invalid batch parameter of IterView
+    ErrBatchValue = errors.New("batch must be 1 or more")
+    // ErrLimitValue for invalid limit parameter of IterView
+    ErrLimitValue = errors.New("limit must be 1 or more")
+)
+
+var (
+    // ErrSetID for setting ID to document which already has one.
+    ErrSetID = errors.New("id can only be set on new documents")
+    // ErrNotStruct for not a struct value
+    ErrNotStruct = errors.New("value not of struct type")
+    // ErrNotDocumentEmbedded for not a document-embedded value
+    ErrNotDocumentEmbedded = errors.New("value not Document-embedded")
+)
+
+var (
 
     // ErrNotModified for HTTP status code 304
     ErrNotModified = errors.New("status 304 - not modified")
@@ -61,11 +77,29 @@ var (
 )
 ```
 
+## func FromJSONCompatibleMap
+```go
+func FromJSONCompatibleMap(obj interface{}, docMap map[string]interface{}) error
+```
+FromJSONCompatibleMap constructs a Document-embedded struct from a JSON-compatible map.
+
 ## func GenerateUUID
 ```go
 func GenerateUUID() string
 ```
 GenerateUUID returns a random 128-bit UUID
+
+## func Load
+```go
+func Load(db *Database, docID string, obj interface{}) error
+```
+Load loads the document in specified database.
+
+## func Store
+```go
+func Store(db *Database, obj interface{}) error
+```
+Store stores the document in specified database.
 
 ## func SyncMany
 ```go
@@ -78,6 +112,12 @@ viewDefns: a sequence of \*ViewDefinition instances.
 removeMissing: whether to remove views found in a design document that are not found in the list of ViewDefinition instances, default false.
 
 callback: a callback function invoked when a design document gets updated; it is called before the doc has actually been saved back to the database.
+
+## func ToJSONCompatibleMap
+```go
+func ToJSONCompatibleMap(obj interface{}) (map[string]interface{}, error)
+```
+ToJSONCompatibleMap converts a Document-embedded struct into a JSON-compatible map, e.g. anything that cannot be jsonified will be ignored silently.
 
 ## type Database
 ```go
@@ -285,51 +325,51 @@ skip: Skip the first 'n' results, where 'n' is the number specified, passing nil
 
 index: Instruct a query to use a specific index, specified either as "<design_document>" or ["<design_document>", "<index_name>"], passing nil to use primary index(\_all_docs) by default.
 
-Inner functions for selector syntax
+## Inner functions for selector syntax
 
-nor(condexprs...) matches if none of the conditions in condexprs match($nor).
+*nor(condexprs...)* matches if none of the conditions in condexprs match($nor).
 
 For example: nor(year == 1990, year == 1989, year == 1997) returns all documents whose year field not in 1989, 1990 and 1997.
 
-all(field, array) matches an array value if it contains all the elements of the argument array($all).
+*all(field, array)* matches an array value if it contains all the elements of the argument array($all).
 
-For example: all(genre, []string{"Comedy", "Short"} returns all documents whose
+For example: all(genre, []string{"Comedy", "Short"} returns all documents whose genre field contains "Comedy" and "Short".
 
-genre field contains "Comedy" and "Short". any(field, condexpr) matches an array field with at least one element meets the specified condition($elemMatch).
+*any(field, condexpr)* matches an array field with at least one element meets the specified condition($elemMatch).
 
-For example: any(genre, genre == "Short" || genre == "Horror") returns all documents whose
+For example: any(genre, genre == "Short" || genre == "Horror") returns all documents whose genre field contains "Short" or "Horror" or both.
 
-genre field contains "Short" or "Horror" or both. exists(field, boolean) checks whether the field exists or not, regardless of its value($exists).
+*exists(field, boolean)* checks whether the field exists or not, regardless of its value($exists).
 
 For example: exists(director, false) returns all documents who does not have a director field.
 
-typeof(field, type) checks the document field's type, valid types are "null", "boolean", "number", "string", "array", "object"($type).
+*typeof(field, type)* checks the document field's type, valid types are "null", "boolean", "number", "string", "array", "object"($type).
 
 For example: typeof(genre, "array") returns all documents whose genre field is of array type.
 
-in(field, array) the field must exist in the array provided($in).
+*in(field, array)* the field must exist in the array provided($in).
 
 For example: in(director, []string{"Mike Portnoy", "Vitali Kanevsky"}) returns all documents whose director field is "Mike Portnoy" or "Vitali Kanevsky".
 
-nin(field, array) the document field must not exist in the array provided($nin).
+*nin(field, array)* the document field must not exist in the array provided($nin).
 
 For example: nin(year, []int{1990, 1992, 1998}) returns all documents whose year field is not in 1990, 1992 or 1998.
 
-size(field, int) matches the length of an array field in a document($size).
+*size(field, int)* matches the length of an array field in a document($size).
 
 For example: size(genre, 2) returns all documents whose genre field is of length 2.
 
-mod(field, divisor, remainder) matches documents where field % divisor == remainder($mod).
+*mod(field, divisor, remainder)* matches documents where field % divisor == remainder($mod).
 
 For example: mod(year, 2, 1) returns all documents whose year field is an odd number.
 
-regex(field, regexstr) a regular expression pattern to match against the document field.
+*regex(field, regexstr)* a regular expression pattern to match against the document field.
 
 For example: regex(title, "^A") returns all documents whose title is begin with an "A".
 
-Inner functions for sort syntax
+##Inner functions for sort syntax
 
-asc(field) sorts the field in ascending order, this is the default option while desc(field) sorts the field in descending order.
+*asc(field)* sorts the field in ascending order, this is the default option while desc(field) sorts the field in descending order.
 
 ### func (d \*Database) QueryJSON
 ```go
@@ -413,6 +453,46 @@ name: the name of the view, for user-defined views use the format "design_docid/
 wrapper: an optional function for processing the result rows after retrieved.
 
 options: optional query parameters.
+
+## type Document
+```go
+type Document struct {
+    ID  string `json:"_id,omitempty"`  // for json only, call SetID/GetID instead
+    Rev string `json:"_rev,omitempty"` // for json only, call GetRev instead
+    // contains filtered or unexported fields
+}
+```
+Document represents a document object in database.
+
+### func DocumentWithID
+```go
+func DocumentWithID(id string) Document
+```
+DocumentWithID returns a new Document with ID.
+
+### func (\*Document) GetID
+```go
+func (d *Document) GetID() string
+```
+GetID returns the document ID.
+
+### func (\*Document) GetRev
+```go
+func (d *Document) GetRev() string
+```
+GetRev returns the document revision.
+
+### func (\*Document) SetID
+```go
+func (d *Document) SetID(id string) error
+```
+SetID sets ID for new document or return error.
+
+### func (\*Document) SetRev
+```go
+func (d *Document) SetRev(rev string)
+```
+SetRev sets revision for document.
 
 ## type Resource
 ```go
@@ -685,6 +765,36 @@ GetDoc retrieves the design document corresponding to this view definition from 
 func (vd *ViewDefinition) Sync(db *Database) ([]UpdateResult, error)
 ```
 Sync ensures that the view stored in the database matches the view defined by this instance.
+
+### func (\*ViewDefinition) View
+```go
+func (vd *ViewDefinition) View(db *Database, options map[string]interface{}) (*ViewResults, error)
+```
+View executes the view definition in the given database.
+
+## type ViewField
+```go
+type ViewField func() (*ViewDefinition, error)
+```
+ViewField represents a view definition value bound to Document.
+
+### func NewViewField
+```go
+func NewViewField(design, name, mapFun, reduceFun, language string, wrapper func(Row) Row, options map[string]interface{}) ViewField
+```
+NewViewField returns a ViewField function. design: the name of the design document.
+
+name: the name of the view.
+
+mapFun: the map function code.
+
+reduceFun: the reduce function code(optional).
+
+language: the name of the programming language used, default is javascript.
+
+wrapper: an optional function for processing the result rows after retrieved.
+
+options: view specific options.
 
 ## type ViewResults
 ```go

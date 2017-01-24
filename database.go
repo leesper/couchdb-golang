@@ -664,13 +664,13 @@ func (d *Database) Cleanup() error {
 // all(field, array) matches an array value if it contains all the elements of the argument array($all).
 //
 // For example: all(genre, []string{"Comedy", "Short"} returns all documents whose
-//
 // genre field contains "Comedy" and "Short".
+//
 // any(field, condexpr) matches an array field with at least one element meets the specified condition($elemMatch).
 //
 // For example: any(genre, genre == "Short" || genre == "Horror") returns all documents whose
-//
 // genre field contains "Short" or "Horror" or both.
+//
 // exists(field, boolean) checks whether the field exists or not, regardless of its value($exists).
 //
 // For example: exists(director, false) returns all documents who does not have a director field.
