@@ -65,8 +65,8 @@ func findPath(s string) (string, string) {
 }
 
 func main() {
-	isContinous := flag.Bool("continous", true, "trigger continous replication in couchdb")
-	isCompact := flag.Bool("compact", true, "compact target database after replication")
+	isContinous := flag.Bool("continous", false, "trigger continous replication in couchdb")
+	isCompact := flag.Bool("compact", false, "compact target database after replication")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s [options] <source> <target>\n", os.Args[0])
 		flag.PrintDefaults()
