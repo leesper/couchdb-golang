@@ -31,4 +31,7 @@
 // to get the data from database.
 //
 // ViewField represents a view definition value bound to Document.
+//
+// tools/replicate is a command-line tool for replicating databases from one CouchDB server to another.
+// This is mainly for backup purposes, but you can also use -continuous option to set up automatic replication.
 package couchdb

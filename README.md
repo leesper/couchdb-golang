@@ -1,4 +1,4 @@
-CouchDB-Golang Library v1.2
+CouchDB-Golang Library v1.2.1
 ===========================================
 
 A Golang library for working with CouchDB 2.x
@@ -14,6 +14,7 @@ supported Golang version:
 * ViewResults : a representation of the results produced by design document views
 * ViewDefinition : a definition of view stored in a specific design document
 * Document : a representation of document object in database
+* tools/replicate : a command-line tool for replicating
 
 Inspired by [CouchDB-Python](https://github.com/djc/couchdb-python)
 
