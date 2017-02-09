@@ -21,7 +21,7 @@ Inspired by [CouchDB-Python](https://github.com/djc/couchdb-python)
 # Documentation
 ```go
 package couchdb
-import "github.com/leesper/couchdb"
+import "github.com/leesper/couchdb-golang"
 ```
 
 ## Constants
