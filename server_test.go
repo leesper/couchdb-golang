@@ -463,7 +463,7 @@ func teardown() {
 	server.Delete("golang-defn")
 	server.Delete("golang-showlist")
 	server.Delete("golang-update")
-	// server.Delete("golang-mapping")
+	server.Delete("golang-mapping")
 }
 
 func setupServer(url string, exitCode int) {
@@ -841,19 +841,30 @@ func TestUserManagement(t *testing.T) {
 	user := "foo"
 	password := "secret"
 	roles := []string{"hero"}
-	server.AddUser(user, password, roles)
+
+	if !server.Contains("_users") {
+		_, err := server.Create("_users")
+		if err != nil {
+			t.Error("create db _users error", err)
+		}
+	}
+
+	_, _, err := server.AddUser(user, password, roles)
+	if err != nil {
+		t.Errorf("add user %s password %s roles %v error %v", user, password, roles, err)
+	}
 
 	token, err := server.Login(user, password)
 	if err != nil {
-		t.Errorf("server add user %s password %s roles %v error %s", user, password, roles, err)
+		t.Errorf("login user %s password %s roles %v error %s", user, password, roles, err)
 	}
 
 	if err = server.VerifyToken(token); err != nil {
-		t.Error("server verify token error", err)
+		t.Error("verify token error", err)
 	}
 
 	if err = server.Logout(token); err != nil {
-		t.Error("server logout error", err)
+		t.Error("logout error", err)
 	}
 
 	if err = server.RemoveUser("foo"); err != nil {
