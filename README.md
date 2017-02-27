@@ -5,6 +5,7 @@ A Golang library for working with CouchDB 2.x
 
 supported Golang version:
 * 1.7.x
+* 1.8.x
 
 [![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang)
 
