@@ -243,6 +243,8 @@ func request(method string, u *url.URL, header http.Header, body io.Reader, para
 	setDefault(&req.Header, "Accept", "application/json")
 	setDefault(&req.Header, "Content-Type", "application/json")
 	updateHeader(&req.Header, &header)
+	updateHeader(&req.Header, cookieAuthHeader)
+
 	rsp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, nil, err
