@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var cookieAuthHeader *http.Header
+
 // Server represents a CouchDB server instance.
 type Server struct {
 	resource *Resource
@@ -311,6 +313,9 @@ func (s *Server) Login(name, password string) (string, error) {
 
 	tokenPart := strings.Split(header.Get("Set-Cookie"), ";")[0]
 	token := strings.Split(tokenPart, "=")[1]
+
+	setupCookieAuth(token)
+
 	return token, err
 }
 
@@ -327,6 +332,9 @@ func (s *Server) Logout(token string) error {
 	header := http.Header{}
 	header.Set("Cookie", strings.Join([]string{"AuthSession", token}, "="))
 	_, _, err := s.resource.DeleteJSON("_session", header, nil)
+
+	clearCookieAuth()
+
 	return err
 }
 
@@ -338,4 +346,13 @@ func (s *Server) RemoveUser(name string) error {
 	}
 	docID := "org.couchdb.user:" + name
 	return db.Delete(docID)
+}
+
+func setupCookieAuth(token string) {
+	cookieAuthHeader = &http.Header{}
+	cookieAuthHeader.Add("Cookie", fmt.Sprintf("AuthSession=%s", token))
+}
+
+func clearCookieAuth() {
+	cookieAuthHeader = nil
 }
