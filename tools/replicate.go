@@ -58,7 +58,7 @@ func findPath(s string) (string, string) {
 	}
 
 	if _, ok := info["couchdb"]; !ok {
-		log.Fatal(fmt.Sprintf("%s doe not appear to be a CouchDB", s))
+		log.Fatal(fmt.Sprintf("%s does not appear to be a CouchDB", s))
 	}
 
 	return base, strings.TrimLeft(u.Path, "/")
