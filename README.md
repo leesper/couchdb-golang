@@ -7,7 +7,7 @@ supported Golang version:
 * 1.7.x
 * 1.8.x
 
-[![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang)
+[![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang) [![GoDoc](https://godoc.org/github.com/leesper/couchdb-golang?status.svg)](http://godoc.org/github.com/leesper/couchdb-golang)
 
 * Resource : a simple wrapper for HTTP requests and error handling
 * Server : CouchDB server instance
