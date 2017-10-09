@@ -14,7 +14,7 @@ A Golang library for CouchDB 2.x, inspired by [CouchDB-Python](https://github.co
 * Document : a representation of document object in database
 * tools/replicate : a command-line tool for replicating
 
-```
+```go
 func (d *Database) Query(fields []string, selector string, sorts []string, limit, skip, index interface{}) ([]map[string]interface{}, error)
 ```
 
@@ -28,11 +28,11 @@ You can query documents using a conditional selector statement in Golang. It wil
 * **index**: Instruct a query to use a specific index, specified either as "<design_document>" or ["<design_document>", "<index_name>"], passing nil to use primary index(\_all_docs) by default.
 
 For example:
-```
+```go
 docsQuery, err := movieDB.Query(nil, `year == 1989 && (director == "Ademir Kenovic" || director == "Dezs Garas")`, nil, nil, nil, nil)
 ```
 equals to:
-```
+```go
 docsRaw, err := movieDB.QueryJSON(`
 {
   "selector": {
