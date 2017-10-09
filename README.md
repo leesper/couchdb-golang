@@ -1,6 +1,6 @@
 # CouchDB-Golang
 
-[![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang)[![GoDoc](https://godoc.org/github.com/leesper/couchdb-golang?status.svg)](http://godoc.org/github.com/leesper/couchdb-golang)[![GitHub license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://raw.githubusercontent.com/leesper/couchdb-golang/master/LICENSE)
+[![Build Status](https://travis-ci.org/leesper/couchdb-golang.svg?branch=master)](https://travis-ci.org/leesper/couchdb-golang) [![GoDoc](https://godoc.org/github.com/leesper/couchdb-golang?status.svg)](http://godoc.org/github.com/leesper/couchdb-golang) [![GitHub license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](https://raw.githubusercontent.com/leesper/couchdb-golang/master/LICENSE)
 
 A Golang library for CouchDB 2.x, inspired by [CouchDB-Python](https://github.com/djc/couchdb-python).
 
