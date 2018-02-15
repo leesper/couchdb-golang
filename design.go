@@ -156,6 +156,12 @@ func (vr *ViewResults) fetch() ([]Row, error) {
 		vr.offset = int(offset)
 	}
 
+	if totalRowsRaw, ok := jsonMap["total_rows"]; ok {
+		var totalRows float64
+		json.Unmarshal(*totalRowsRaw, &totalRows)
+		vr.totalRows = int(totalRows)
+	}
+
 	if updateSeqRaw, ok := jsonMap["update_seq"]; ok {
 		var updateSeq float64
 		json.Unmarshal(*updateSeqRaw, &updateSeq)
@@ -164,7 +170,6 @@ func (vr *ViewResults) fetch() ([]Row, error) {
 
 	var rowsRaw []*json.RawMessage
 	json.Unmarshal(*jsonMap["rows"], &rowsRaw)
-	vr.totalRows = len(rowsRaw)
 
 	rows := make([]Row, len(rowsRaw))
 	var rowMap map[string]interface{}
