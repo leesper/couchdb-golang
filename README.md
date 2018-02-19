@@ -95,6 +95,7 @@ For example: regex(title, "^A") returns all documents whose title is begin with 
 * [Serkan Sipahi](https://github.com/SerkanSipahi)
 * [paduraru](https://github.com/paduraru)
 * [Andrei Pavel](https://github.com/andreipavelQ)
+* [jcantonio](https://github.com/jcantonio)
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change. Please make sure to update unit tests as appropriate.
