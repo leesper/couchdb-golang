@@ -102,6 +102,8 @@ func viewLikeResourceRequest(res *Resource, opts map[string]interface{}) (http.H
 				return nil, nil, err
 			}
 			params.Add(key, string(data))
+		case "startkey_string", "endkey_string":
+			params.Add(strings.Split(key, "_")[0], val.(string))
 		case "conflicts", "descending", "group", "include_docs", "attachments", "att_encoding_info", "inclusive_end", "reduce", "sorted", "update_seq":
 			if val.(bool) {
 				params.Add(key, "true")
