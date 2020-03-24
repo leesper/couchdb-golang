@@ -16,6 +16,33 @@ type Server struct {
 	resource *Resource
 }
 
+type DatabaseInfo struct {
+	DbName    string `json:"db_name"`
+	PurgeSeq  string `json:"purge_seq"`
+	UpdateSeq string `json:"update_seq"`
+	Sizes     struct {
+		File     int `json:"file"`
+		External int `json:"external"`
+		Active   int `json:"active"`
+	} `json:"sizes"`
+	Other struct {
+		DataSize int `json:"data_size"`
+	} `json:"other"`
+	DocDelCount       int  `json:"doc_del_count"`
+	DocCount          int  `json:"doc_count"`
+	DiskSize          int  `json:"disk_size"`
+	DiskFormatVersion int  `json:"disk_format_version"`
+	DataSize          int  `json:"data_size"`
+	CompactRunning    bool `json:"compact_running"`
+	Cluster           struct {
+		Q int `json:"q"`
+		N int `json:"n"`
+		W int `json:"w"`
+		R int `json:"r"`
+	} `json:"cluster"`
+	InstanceStartTime string `json:"instance_start_time"`
+}
+
 // NewServer creates a CouchDB server instance in address urlStr.
 func NewServer(urlStr string) (*Server, error) {
 	return newServer(urlStr, true)
@@ -168,6 +195,28 @@ func (s *Server) Get(name string) (*Database, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// GetDatabaseInfo retrieve information about the database
+func (s *Server) GetDatabaseInfo(name string) (*DatabaseInfo, error) {
+	jsonMap := DatabaseInfo{}
+	res, err := s.resource.NewResourceWithURL(name)
+	if err != nil {
+		return nil, err
+	}
+	db, err := NewDatabaseWithResource(res)
+	if err != nil {
+		return nil, err
+	}
+	_, resp, err := db.resource.Get("", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(resp, &jsonMap)
+	if err != nil {
+		return nil, err
+	}
+	return &jsonMap, nil
 }
 
 // Contains returns true if a db with given name exsited.
